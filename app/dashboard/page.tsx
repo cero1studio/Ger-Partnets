@@ -202,6 +202,10 @@ export default function DashboardPage() {
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+                <DialogHeader className="sr-only">
+                  <DialogTitle>Nuevo Referido</DialogTitle>
+                  <DialogDescription>Formulario interactivo para registrar un nuevo candidato</DialogDescription>
+                </DialogHeader>
                 <LeadForm 
                   formData={formData}
                   setFormData={setFormData}
