@@ -124,8 +124,7 @@ export async function getDealsByTag(tagId: string) {
       nombre: p.dealname ?? `${contact.firstname ?? ""} ${contact.lastname ?? ""}`.trim(),
       email: contact.email ?? "",
       telefono: contact.phone ?? contact.mobilephone ?? "",
-      ciudad: contact.city ?? "",
-      pais: contact.country ?? "",
+      nacionalidad: contact.country ?? "",
       etapa: p.dealstage ?? "",
       stageLabel: STAGE_MAP[p.dealstage] ?? p.dealstage,
       pipeline: p.pipeline ?? "default",
@@ -147,7 +146,7 @@ export async function createDeal(params: {
   apellido: string
   email: string
   telefono: string
-  ciudad?: string
+  nacionalidad?: string
   programa?: string
   tagId: string          // hs_tag_ids del aliado
   notas?: string
@@ -161,7 +160,7 @@ export async function createDeal(params: {
         lastname:  params.apellido,
         email:     params.email,
         phone:     params.telefono,
-        city:      params.ciudad ?? "",
+        country:   params.nacionalidad ?? "",
       },
     })
     contactId = contactData.id

@@ -45,7 +45,7 @@ type Lead = {
   nombre: string
   email: string
   telefono: string
-  ciudad: string
+  nacionalidad: string
   etapa: string
   stageLabel?: string
   fechaRegistro: string
@@ -102,7 +102,6 @@ export default function DashboardPage() {
     apellido: "",
     email: "",
     telefono: "",
-    ciudad: "",
     nacionalidad: "",
     programa: "",
     tuvoVisa: false,
@@ -129,7 +128,7 @@ export default function DashboardPage() {
           apellido:           formData.apellido,
           email:              formData.email,
           telefono:           formData.telefono,
-          ciudad:             formData.ciudad,
+          nacionalidad:       formData.nacionalidad,
           programa:           formData.programa,
           tuvoVisa:           formData.tuvoVisa,
           tipoVisa:           formData.tipoVisa,
@@ -158,7 +157,6 @@ export default function DashboardPage() {
       apellido: "",
       email: "",
       telefono: "",
-      ciudad: "",
       nacionalidad: "",
       programa: "",
       tuvoVisa: false,
@@ -333,10 +331,10 @@ function LeadCard({ lead, onClick }: { lead: Lead; onClick: () => void }) {
               <span>{lead.telefono}</span>
             </div>
           )}
-          {lead.ciudad && (
+          {lead.nacionalidad && (
             <div className="flex items-center gap-2">
               <MapPin className="w-3 h-3 shrink-0" />
-              <span>{lead.ciudad}</span>
+              <span>{lead.nacionalidad}</span>
             </div>
           )}
           <div className="flex items-center gap-2">
@@ -387,10 +385,10 @@ function LeadDetail({ lead }: { lead: Lead; onClose: () => void }) {
               <a href={`tel:${lead.telefono}`} className="text-primary hover:underline">{lead.telefono}</a>
             </div>
           )}
-          {lead.ciudad && (
+          {lead.nacionalidad && (
             <div className="flex items-center gap-3">
               <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
-              <span>{lead.ciudad}</span>
+              <span>{lead.nacionalidad}</span>
             </div>
           )}
         </div>

@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const {
-      nombre, apellido, email, telefono, ciudad, programa,
+      nombre, apellido, email, telefono, nacionalidad, programa,
       tuvoVisa, tipoVisa, puedeCubrirCostos, profesion, nivelEscolaridad,
       nucleoFamiliar, notas,
     } = body
@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
 
     // Codificar campos de perfilamiento en la descripción del deal
     const perfilLines = [
+      nacionalidad   ? `Nacionalidad: ${nacionalidad}` : null,
       programa       ? `Programa: ${programa}` : null,
       profesion      ? `Profesión: ${profesion}` : null,
       nivelEscolaridad ? `Escolaridad: ${nivelEscolaridad}` : null,
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest) {
 
     const description = perfilLines.join("\n")
 
-    const result = await createDeal({ nombre, apellido, email, telefono, ciudad, programa, tagId, notas: description })
+    const result = await createDeal({ nombre, apellido, email, telefono, nacionalidad, programa, tagId, notas: description })
     return NextResponse.json({ ok: true, ...result }, { status: 201 })
   } catch (err) {
     console.error("[POST /api/leads]", err)
