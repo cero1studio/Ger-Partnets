@@ -71,16 +71,14 @@ export default function DashboardLayout({
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </Button>
 
-          <Link href="/dashboard" className="flex items-center gap-3">
+          <Link href="/dashboard" className="flex items-center">
             <Image 
-              src="/logo.png" 
-              alt="G.E.R. Logo" 
-              width={36} 
-              height={36}
-              className="h-9 w-auto shrink-0"
+              src="/logo-full.png" 
+              alt="Global Express Recruiting" 
+              width={180} 
+              height={40}
+              className="h-10 w-auto shrink-0"
             />
-            <span className="text-lg font-bold text-primary-foreground hidden sm:inline">G.E.R. Partner Pipeline</span>
-            <span className="text-lg font-bold text-primary-foreground sm:hidden">G.E.R.</span>
           </Link>
         </div>
 

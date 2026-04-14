@@ -99,17 +99,13 @@ export default function RegistroPage() {
       {/* Left Panel - Brand */}
       <div className="hidden lg:flex lg:w-1/2 bg-primary flex-col justify-between p-8 xl:p-12">
         <div>
-          <div className="flex items-center gap-3 mb-4">
-            <Image 
-              src="/logo.png" 
-              alt="G.E.R. Logo" 
-              width={48} 
-              height={48}
-              className="w-12 h-12"
-            />
-            <span className="text-2xl font-bold text-primary-foreground tracking-tight">G.E.R.</span>
-          </div>
-          <p className="text-primary-foreground/70 text-sm">Global Express Recruiting</p>
+          <Image 
+            src="/logo-full.png" 
+            alt="Global Express Recruiting" 
+            width={280} 
+            height={60}
+            className="h-14 w-auto"
+          />
         </div>
         
         <div className="space-y-8">
@@ -146,15 +142,14 @@ export default function RegistroPage() {
       <div className="flex-1 flex items-center justify-center p-6 sm:p-8 bg-background min-h-screen lg:min-h-0">
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
-          <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
+          <div className="lg:hidden flex items-center mb-8 justify-center">
             <Image 
-              src="/logo.png" 
-              alt="G.E.R. Logo" 
-              width={48} 
-              height={48}
-              className="w-12 h-12 bg-primary rounded-lg p-1"
+              src="/logo-full.png" 
+              alt="Global Express Recruiting" 
+              width={220} 
+              height={50}
+              className="h-12 w-auto bg-primary rounded-lg p-2"
             />
-            <span className="text-2xl font-bold text-foreground tracking-tight">G.E.R.</span>
           </div>
 
           <Card className="border-0 shadow-xl">

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   Select,
   SelectContent,
@@ -25,17 +26,42 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
+import {
   UserPlus,
   Users,
   Phone,
   Mail,
   MapPin,
   Calendar,
-  ChevronRight,
   Upload,
   X,
   FileText,
+  MessageSquare,
+  Video,
+  User,
+  Clock,
 } from "lucide-react"
+
+type Comment = {
+  id: string
+  autor: string
+  texto: string
+  fecha: string
+}
+
+type Meeting = {
+  id: string
+  titulo: string
+  fecha: string
+  tipo: "llamada" | "video" | "presencial"
+  notas?: string
+}
 
 type Lead = {
   id: string
@@ -50,37 +76,30 @@ type Lead = {
   nucleoFamiliar: number
   dedicacion: string
   notas?: string
+  responsable: string
+  comentarios?: Comment[]
+  reuniones?: Meeting[]
 }
 
+// Etapas de HubSpot
 const etapas = [
-  { id: "registro", nombre: "Registro", color: "bg-blue-500" },
-  { id: "screening", nombre: "Screening Inicial", color: "bg-yellow-500" },
-  { id: "entrevistas", nombre: "Entrevistas", color: "bg-orange-500" },
-  { id: "programa", nombre: "Seguimiento de Proceso", color: "bg-purple-500" },
-  { id: "contratado", nombre: "Contratado", color: "bg-green-500" },
+  { id: "contacto-inicial", nombre: "Contacto inicial", color: "bg-blue-500" },
+  { id: "no-contesta", nombre: "No contesta", color: "bg-gray-400" },
+  { id: "perfilamiento", nombre: "Perfilamiento", color: "bg-yellow-500" },
+  { id: "reunion-asesoria", nombre: "Reunión asesoría", color: "bg-orange-500" },
+  { id: "seguimiento", nombre: "Seguimiento", color: "bg-cyan-500" },
+  { id: "prospecto", nombre: "Prospecto", color: "bg-indigo-500" },
+  { id: "pago-g1", nombre: "Pago G1", color: "bg-purple-500" },
+  { id: "pago-programa", nombre: "Pago programa", color: "bg-pink-500" },
+  { id: "retargeting", nombre: "Retargeting", color: "bg-amber-500" },
+  { id: "lead-ganado", nombre: "Lead ganado", color: "bg-green-500" },
+  { id: "lead-perdido", nombre: "Lead perdido", color: "bg-red-500" },
 ]
 
 const nacionalidades = [
-  "Venezuela",
-  "Colombia",
-  "México",
-  "Argentina",
-  "Perú",
-  "Ecuador",
-  "Chile",
-  "República Dominicana",
-  "Cuba",
-  "Honduras",
-  "Guatemala",
-  "El Salvador",
-  "Nicaragua",
-  "Costa Rica",
-  "Panamá",
-  "Bolivia",
-  "Paraguay",
-  "Uruguay",
-  "Brasil",
-  "Otro",
+  "Venezuela", "Colombia", "México", "Argentina", "Perú", "Ecuador", "Chile",
+  "República Dominicana", "Cuba", "Honduras", "Guatemala", "El Salvador",
+  "Nicaragua", "Costa Rica", "Panamá", "Bolivia", "Paraguay", "Uruguay", "Brasil", "Otro",
 ]
 
 const programas = [
@@ -104,12 +123,20 @@ const demoUsers = {
         telefono: "+58 424 123 4567",
         nacionalidad: "Venezuela",
         programa: "EB-3 Unskilled Worker",
-        etapa: "registro",
+        etapa: "contacto-inicial",
         fechaRegistro: "10/04/2026",
         tieneEB3: true,
         nucleoFamiliar: 4,
         dedicacion: "full-time",
         notas: "Interesada en trabajos de procesamiento de alimentos",
+        responsable: "Ana García",
+        comentarios: [
+          { id: "c1", autor: "Ana García", texto: "Primera llamada realizada, muy interesada en el programa.", fecha: "10/04/2026 10:30" },
+          { id: "c2", autor: "Ana García", texto: "Documentos pendientes: pasaporte y certificado de antecedentes.", fecha: "11/04/2026 15:00" },
+        ],
+        reuniones: [
+          { id: "r1", titulo: "Llamada de introducción", fecha: "10/04/2026 10:00", tipo: "llamada", notas: "Explicación inicial del programa" },
+        ],
       },
       {
         id: "2",
@@ -118,12 +145,19 @@ const demoUsers = {
         telefono: "+57 311 987 6543",
         nacionalidad: "Colombia",
         programa: "EB-3 Skilled Worker",
-        etapa: "screening",
+        etapa: "perfilamiento",
         fechaRegistro: "08/04/2026",
         tieneEB3: true,
         nucleoFamiliar: 2,
         dedicacion: "full-time",
         notas: "Ingeniero industrial con 5 años de experiencia",
+        responsable: "Luis Martínez",
+        comentarios: [
+          { id: "c3", autor: "Luis Martínez", texto: "CV revisado, perfil excelente para EB-3 Skilled.", fecha: "09/04/2026 09:00" },
+        ],
+        reuniones: [
+          { id: "r2", titulo: "Video llamada de evaluación", fecha: "09/04/2026 14:00", tipo: "video", notas: "Evaluación técnica completada" },
+        ],
       },
       {
         id: "3",
@@ -132,12 +166,20 @@ const demoUsers = {
         telefono: "+52 55 8765 4321",
         nacionalidad: "México",
         programa: "EB-3 Unskilled Worker",
-        etapa: "entrevistas",
+        etapa: "reunion-asesoria",
         fechaRegistro: "01/04/2026",
         tieneEB3: true,
         nucleoFamiliar: 3,
         dedicacion: "full-time",
         notas: "Disponibilidad inmediata",
+        responsable: "Carmen López",
+        comentarios: [
+          { id: "c4", autor: "Carmen López", texto: "Reunión agendada para el viernes.", fecha: "03/04/2026 11:00" },
+          { id: "c5", autor: "Carmen López", texto: "Muy motivada, familia lista para mudarse.", fecha: "05/04/2026 16:30" },
+        ],
+        reuniones: [
+          { id: "r3", titulo: "Asesoría completa", fecha: "05/04/2026 10:00", tipo: "video", notas: "Se explicó todo el proceso EB-3" },
+        ],
       },
       {
         id: "4",
@@ -146,12 +188,17 @@ const demoUsers = {
         telefono: "+51 999 111 2222",
         nacionalidad: "Perú",
         programa: "EB-3 Skilled Worker",
-        etapa: "programa",
+        etapa: "pago-g1",
         fechaRegistro: "15/03/2026",
         tieneEB3: true,
         nucleoFamiliar: 5,
         dedicacion: "full-time",
         notas: "Técnico en soldadura certificado",
+        responsable: "Ana García",
+        comentarios: [
+          { id: "c6", autor: "Ana García", texto: "Pago G1 confirmado, procesando documentación.", fecha: "20/03/2026 14:00" },
+        ],
+        reuniones: [],
       },
       {
         id: "5",
@@ -160,12 +207,19 @@ const demoUsers = {
         telefono: "+593 98 765 4321",
         nacionalidad: "Ecuador",
         programa: "EB-3 Unskilled Worker",
-        etapa: "contratado",
+        etapa: "lead-ganado",
         fechaRegistro: "01/03/2026",
         tieneEB3: true,
         nucleoFamiliar: 2,
         dedicacion: "full-time",
         notas: "Proceso completado exitosamente",
+        responsable: "Luis Martínez",
+        comentarios: [
+          { id: "c7", autor: "Luis Martínez", texto: "Caso cerrado exitosamente. Cliente muy satisfecha.", fecha: "10/04/2026 09:00" },
+        ],
+        reuniones: [
+          { id: "r4", titulo: "Llamada de cierre", fecha: "10/04/2026 09:00", tipo: "llamada", notas: "Felicitaciones y próximos pasos" },
+        ],
       },
       {
         id: "6",
@@ -174,12 +228,17 @@ const demoUsers = {
         telefono: "+58 412 333 4444",
         nacionalidad: "Venezuela",
         programa: "H-2B Visa",
-        etapa: "registro",
+        etapa: "no-contesta",
         fechaRegistro: "12/04/2026",
         tieneEB3: false,
         nucleoFamiliar: 1,
         dedicacion: "part-time",
         notas: "",
+        responsable: "Carmen López",
+        comentarios: [
+          { id: "c8", autor: "Carmen López", texto: "Tercer intento de contacto sin respuesta.", fecha: "14/04/2026 10:00" },
+        ],
+        reuniones: [],
       },
       {
         id: "7",
@@ -188,12 +247,19 @@ const demoUsers = {
         telefono: "+57 320 555 6666",
         nacionalidad: "Colombia",
         programa: "EB-3 Unskilled Worker",
-        etapa: "screening",
+        etapa: "seguimiento",
         fechaRegistro: "05/04/2026",
         tieneEB3: true,
         nucleoFamiliar: 3,
         dedicacion: "full-time",
         notas: "Referencias laborales verificadas",
+        responsable: "Ana García",
+        comentarios: [
+          { id: "c9", autor: "Ana García", texto: "En proceso de recopilar documentos adicionales.", fecha: "12/04/2026 11:00" },
+        ],
+        reuniones: [
+          { id: "r5", titulo: "Seguimiento semanal", fecha: "12/04/2026 11:00", tipo: "llamada" },
+        ],
       },
     ] as Lead[],
   },
@@ -205,21 +271,20 @@ const demoUsers = {
   },
 }
 
-// Get user from localStorage or default to demo user
-const getStoredUser = (): string => {
-  if (typeof window !== "undefined") {
-    return localStorage.getItem("ger_demo_user") || "demo@ger.com"
-  }
-  return "demo@ger.com"
-}
-
 export default function DashboardPage() {
-  const [currentUser, setCurrentUser] = useState(getStoredUser())
-  const userData = demoUsers[currentUser as keyof typeof demoUsers] || demoUsers["demo@ger.com"]
-  const [leads, setLeads] = useState<Lead[]>(userData.leads)
+  const [currentUser, setCurrentUser] = useState("demo@ger.com")
+  const [leads, setLeads] = useState<Lead[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [cvFile, setCvFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)
+  
+  useEffect(() => {
+    const storedUser = localStorage.getItem("ger_demo_user") || "demo@ger.com"
+    setCurrentUser(storedUser)
+    const userData = demoUsers[storedUser as keyof typeof demoUsers] || demoUsers["demo@ger.com"]
+    setLeads(userData.leads)
+  }, [])
   
   // Form state
   const [formData, setFormData] = useState({
@@ -271,12 +336,15 @@ export default function DashboardPage() {
       telefono: formData.telefono,
       nacionalidad: formData.nacionalidad,
       programa: formData.programa,
-      etapa: "registro",
+      etapa: "contacto-inicial",
       fechaRegistro: new Date().toLocaleDateString("es-ES"),
       tieneEB3: formData.tieneEB3,
       nucleoFamiliar: parseInt(formData.nucleoFamiliar),
       dedicacion: formData.dedicacion,
       notas: formData.notas,
+      responsable: "Sin asignar",
+      comentarios: [],
+      reuniones: [],
     }
 
     setLeads([...leads, newLead])
@@ -416,11 +484,11 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent className="space-y-3 min-h-[200px]">
                   {getLeadsByEtapa(etapa.id).map((lead) => (
-                    <LeadCard key={lead.id} lead={lead} />
+                    <LeadCard key={lead.id} lead={lead} onClick={() => setSelectedLead(lead)} />
                   ))}
                   {getLeadsByEtapa(etapa.id).length === 0 && (
                     <div className="text-center py-8 text-muted-foreground text-sm">
-                      Sin referidos en esta etapa
+                      Sin referidos
                     </div>
                   )}
                 </CardContent>
@@ -429,46 +497,227 @@ export default function DashboardPage() {
           ))}
         </div>
       </div>
+
+      {/* Lead Detail Sheet */}
+      <Sheet open={!!selectedLead} onOpenChange={(open) => !open && setSelectedLead(null)}>
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+          {selectedLead && <LeadDetail lead={selectedLead} onClose={() => setSelectedLead(null)} />}
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }
 
-function LeadCard({ lead }: { lead: Lead }) {
+function LeadCard({ lead, onClick }: { lead: Lead; onClick: () => void }) {
+  const commentCount = lead.comentarios?.length || 0
+  const meetingCount = lead.reuniones?.length || 0
+  
   return (
-    <Card className="bg-card hover:shadow-md transition-shadow cursor-pointer">
+    <Card 
+      className="bg-card hover:shadow-md transition-shadow cursor-pointer"
+      onClick={onClick}
+    >
       <CardContent className="p-4">
         <div className="flex items-start justify-between mb-2">
           <h3 className="font-medium text-foreground text-sm">{lead.nombre}</h3>
-          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          {lead.tieneEB3 && (
+            <Badge className="bg-secondary text-secondary-foreground text-xs shrink-0">EB-3</Badge>
+          )}
         </div>
-        <div className="space-y-1.5 text-xs text-muted-foreground">
+        
+        <div className="space-y-1.5 text-xs text-muted-foreground mb-3">
           <div className="flex items-center gap-2">
-            <Mail className="w-3 h-3" />
-            <span className="truncate">{lead.email}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Phone className="w-3 h-3" />
-            <span>{lead.telefono}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <MapPin className="w-3 h-3" />
+            <MapPin className="w-3 h-3 shrink-0" />
             <span>{lead.nacionalidad}</span>
           </div>
           <div className="flex items-center gap-2">
-            <Calendar className="w-3 h-3" />
+            <Calendar className="w-3 h-3 shrink-0" />
             <span>{lead.fechaRegistro}</span>
           </div>
         </div>
-        <div className="mt-3 pt-3 border-t flex items-center justify-between">
+
+        {/* Responsable */}
+        <div className="flex items-center gap-2 mb-3 p-2 bg-muted/50 rounded-md">
+          <Avatar className="w-5 h-5">
+            <AvatarFallback className="text-[10px] bg-primary text-primary-foreground">
+              {lead.responsable.split(" ").map(n => n[0]).join("")}
+            </AvatarFallback>
+          </Avatar>
+          <span className="text-xs text-muted-foreground">{lead.responsable}</span>
+        </div>
+
+        <div className="pt-2 border-t flex items-center justify-between">
           <Badge variant="outline" className="text-xs">
             {lead.programa}
           </Badge>
-          {lead.tieneEB3 && (
-            <Badge className="bg-green-100 text-green-700 text-xs">EB-3</Badge>
-          )}
+          <div className="flex items-center gap-2 text-muted-foreground">
+            {commentCount > 0 && (
+              <div className="flex items-center gap-1 text-xs">
+                <MessageSquare className="w-3 h-3" />
+                {commentCount}
+              </div>
+            )}
+            {meetingCount > 0 && (
+              <div className="flex items-center gap-1 text-xs">
+                <Video className="w-3 h-3" />
+                {meetingCount}
+              </div>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
+  )
+}
+
+function LeadDetail({ lead, onClose }: { lead: Lead; onClose: () => void }) {
+  const etapa = etapas.find(e => e.id === lead.etapa)
+  
+  return (
+    <div className="space-y-6">
+      <SheetHeader>
+        <SheetTitle className="flex items-center gap-3">
+          <Avatar className="w-10 h-10">
+            <AvatarFallback className="bg-primary text-primary-foreground">
+              {lead.nombre.split(" ").map(n => n[0]).join("").slice(0, 2)}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <p className="text-lg font-semibold">{lead.nombre}</p>
+            <Badge className={`${etapa?.color} text-white text-xs mt-1`}>
+              {etapa?.nombre}
+            </Badge>
+          </div>
+        </SheetTitle>
+        <SheetDescription>Hoja de vida del candidato</SheetDescription>
+      </SheetHeader>
+
+      {/* Información de Contacto */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-foreground border-b pb-2">Contacto</h3>
+        <div className="grid gap-2 text-sm">
+          <div className="flex items-center gap-3">
+            <Mail className="w-4 h-4 text-muted-foreground" />
+            <a href={`mailto:${lead.email}`} className="text-primary hover:underline">{lead.email}</a>
+          </div>
+          <div className="flex items-center gap-3">
+            <Phone className="w-4 h-4 text-muted-foreground" />
+            <a href={`tel:${lead.telefono}`} className="text-primary hover:underline">{lead.telefono}</a>
+          </div>
+          <div className="flex items-center gap-3">
+            <MapPin className="w-4 h-4 text-muted-foreground" />
+            <span>{lead.nacionalidad}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Información del Programa */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-foreground border-b pb-2">Programa</h3>
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <p className="text-muted-foreground text-xs">Programa</p>
+            <p className="font-medium">{lead.programa}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-xs">Capacidad EB-3</p>
+            <p className="font-medium">{lead.tieneEB3 ? "Sí" : "No"}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-xs">Núcleo Familiar</p>
+            <p className="font-medium">{lead.nucleoFamiliar} personas</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-xs">Dedicación</p>
+            <p className="font-medium">{lead.dedicacion === "full-time" ? "Tiempo completo" : "Medio tiempo"}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Responsable */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-foreground border-b pb-2">Responsable</h3>
+        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+          <Avatar className="w-8 h-8">
+            <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+              {lead.responsable.split(" ").map(n => n[0]).join("")}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <p className="font-medium text-sm">{lead.responsable}</p>
+            <p className="text-xs text-muted-foreground">Asesor asignado en HubSpot</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Notas */}
+      {lead.notas && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-foreground border-b pb-2">Notas</h3>
+          <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">{lead.notas}</p>
+        </div>
+      )}
+
+      {/* Reuniones */}
+      {lead.reuniones && lead.reuniones.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-foreground border-b pb-2 flex items-center gap-2">
+            <Video className="w-4 h-4" />
+            Reuniones ({lead.reuniones.length})
+          </h3>
+          <div className="space-y-2">
+            {lead.reuniones.map((reunion) => (
+              <div key={reunion.id} className="p-3 bg-muted/50 rounded-lg text-sm">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="font-medium">{reunion.titulo}</p>
+                  <Badge variant="outline" className="text-xs capitalize">
+                    {reunion.tipo === "llamada" ? "Llamada" : reunion.tipo === "video" ? "Video" : "Presencial"}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Clock className="w-3 h-3" />
+                  {reunion.fecha}
+                </div>
+                {reunion.notas && (
+                  <p className="text-xs text-muted-foreground mt-2">{reunion.notas}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Comentarios */}
+      {lead.comentarios && lead.comentarios.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-foreground border-b pb-2 flex items-center gap-2">
+            <MessageSquare className="w-4 h-4" />
+            Comentarios ({lead.comentarios.length})
+          </h3>
+          <div className="space-y-3">
+            {lead.comentarios.map((comment) => (
+              <div key={comment.id} className="text-sm">
+                <div className="flex items-center gap-2 mb-1">
+                  <Avatar className="w-5 h-5">
+                    <AvatarFallback className="text-[10px] bg-muted-foreground text-muted">
+                      {comment.autor.split(" ").map(n => n[0]).join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="font-medium text-xs">{comment.autor}</span>
+                  <span className="text-xs text-muted-foreground">{comment.fecha}</span>
+                </div>
+                <p className="text-muted-foreground pl-7">{comment.texto}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Fecha de Registro */}
+      <div className="pt-4 border-t text-xs text-muted-foreground">
+        Registrado el {lead.fechaRegistro}
+      </div>
+    </div>
   )
 }
 
@@ -649,42 +898,36 @@ function LeadForm({
           <RadioGroup
             value={formData.dedicacion}
             onValueChange={(value) => setFormData({ ...formData, dedicacion: value })}
-            className="grid grid-cols-2 gap-2"
+            className="flex gap-4"
           >
-            <Label
-              htmlFor="full-time"
-              className="flex items-center gap-2 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5"
-            >
+            <div className="flex items-center space-x-2">
               <RadioGroupItem value="full-time" id="full-time" />
-              <span className="text-sm">Full-Time</span>
-            </Label>
-            <Label
-              htmlFor="part-time"
-              className="flex items-center gap-2 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5"
-            >
+              <Label htmlFor="full-time" className="font-normal cursor-pointer">Tiempo completo</Label>
+            </div>
+            <div className="flex items-center space-x-2">
               <RadioGroupItem value="part-time" id="part-time" />
-              <span className="text-sm">Part-Time</span>
-            </Label>
+              <Label htmlFor="part-time" className="font-normal cursor-pointer">Medio tiempo</Label>
+            </div>
           </RadioGroup>
         </div>
       </div>
 
       {/* CV Upload */}
-      <div className="space-y-2">
-        <Label>CV / Hoja de Vida (PDF)</Label>
+      <div className="space-y-3">
+        <Label>Currículum (PDF)</Label>
         <div
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
             isDragging ? "border-primary bg-primary/5" : "border-border"
-          } ${cvFile ? "bg-green-50 border-green-300" : ""}`}
+          }`}
         >
           {cvFile ? (
             <div className="flex items-center justify-center gap-3">
-              <FileText className="w-8 h-8 text-green-600" />
+              <FileText className="w-8 h-8 text-primary" />
               <div className="text-left">
-                <p className="text-sm font-medium text-foreground">{cvFile.name}</p>
+                <p className="text-sm font-medium">{cvFile.name}</p>
                 <p className="text-xs text-muted-foreground">
                   {(cvFile.size / 1024 / 1024).toFixed(2)} MB
                 </p>
@@ -693,29 +936,26 @@ function LeadForm({
                 type="button"
                 variant="ghost"
                 size="icon"
-                onClick={() => setCvFile(null)}
                 className="ml-2"
+                onClick={() => setCvFile(null)}
               >
                 <X className="w-4 h-4" />
               </Button>
             </div>
           ) : (
             <>
-              <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground mb-2">
-                Arrastra y suelta el archivo aquí
+              <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+              <p className="text-sm text-muted-foreground mb-1">
+                Arrastra el archivo aquí o
               </p>
-              <label htmlFor="cv-upload">
-                <Input
-                  id="cv-upload"
+              <label className="text-sm text-primary hover:underline cursor-pointer">
+                selecciona un archivo
+                <input
                   type="file"
                   accept=".pdf"
-                  onChange={handleFileChange}
                   className="hidden"
+                  onChange={handleFileChange}
                 />
-                <Button type="button" variant="outline" size="sm" asChild>
-                  <span>Seleccionar archivo</span>
-                </Button>
               </label>
             </>
           )}
@@ -727,7 +967,7 @@ function LeadForm({
         <Label htmlFor="notas">Notas Adicionales</Label>
         <Textarea
           id="notas"
-          placeholder="Información adicional sobre el candidato..."
+          placeholder="Información relevante sobre el candidato..."
           value={formData.notas}
           onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
           rows={3}
@@ -735,12 +975,12 @@ function LeadForm({
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3 pt-2">
-        <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>
+      <div className="flex gap-3 pt-4">
+        <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
           Cancelar
         </Button>
         <Button type="submit" className="flex-1">
-          Agregar Referido
+          Guardar Referido
         </Button>
       </div>
     </form>
