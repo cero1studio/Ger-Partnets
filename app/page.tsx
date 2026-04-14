@@ -68,14 +68,15 @@ export default function LoginPage() {
     <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Left Panel - Brand */}
       <div className="hidden lg:flex lg:w-1/2 bg-primary flex-col justify-between p-8 xl:p-12">
-        <div>
+        <div className="flex items-center gap-3">
           <Image 
-            src="/logo-full.png" 
-            alt="Global Express Recruiting" 
-            width={280} 
-            height={60}
-            className="h-14 w-auto"
+            src="/logo.png" 
+            alt="G.E.R." 
+            width={48} 
+            height={48}
+            className="h-12 w-auto"
           />
+          <span className="text-xl font-bold text-primary-foreground">G.E.R.</span>
         </div>
         
         <div className="space-y-8">
@@ -112,14 +113,15 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center p-6 sm:p-8 bg-background min-h-screen lg:min-h-0">
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
-          <div className="lg:hidden flex items-center mb-8 justify-center">
+          <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
             <Image 
-              src="/logo-full.png" 
-              alt="Global Express Recruiting" 
-              width={220} 
-              height={50}
-              className="h-12 w-auto bg-primary rounded-lg p-2"
+              src="/logo.png" 
+              alt="G.E.R." 
+              width={48} 
+              height={48}
+              className="h-12 w-auto"
             />
+            <span className="text-xl font-bold text-foreground">G.E.R.</span>
           </div>
 
           <Card className="border-0 shadow-xl">
