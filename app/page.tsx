@@ -53,7 +53,7 @@ export default function LoginPage() {
         setErrors({ email: data.error ?? "Credenciales incorrectas" })
         return
       }
-      router.push("/dashboard")
+      router.push(data.role === "admin" ? "/admin" : "/dashboard")
     } catch {
       setErrors({ email: "Error de conexión. Intenta de nuevo." })
     } finally {

@@ -10,6 +10,7 @@ export interface JWTPayload {
   etiqueta: string
   nombre: string
   apellido: string
+  role: "admin" | "aliado"
 }
 
 export function signToken(payload: JWTPayload) {

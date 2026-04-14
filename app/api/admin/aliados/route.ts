@@ -1,16 +1,45 @@
 import { NextRequest, NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
+import { getSession } from "@/lib/auth"
 import { connectDB } from "@/lib/mongodb"
 import User from "@/lib/models/User"
-import { signToken, cookieName } from "@/lib/auth"
 import { createAliaoTag } from "@/lib/hubspot"
 
+async function requireAdmin() {
+  const session = await getSession()
+  if (!session || session.role !== "admin") return null
+  return session
+}
+
+// GET /api/admin/aliados — lista todos los aliados
+export async function GET() {
+  if (!(await requireAdmin())) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 })
+  }
+
+  await connectDB()
+  const aliados = await User.find({ role: "aliado" })
+    .select("-password")
+    .sort({ createdAt: -1 })
+    .lean()
+
+  return NextResponse.json({ aliados })
+}
+
+// POST /api/admin/aliados — crear nuevo aliado desde el admin
 export async function POST(req: NextRequest) {
+  if (!(await requireAdmin())) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 })
+  }
+
   try {
     const { nombre, apellido, email, password } = await req.json()
 
     if (!nombre || !apellido || !email || !password) {
       return NextResponse.json({ error: "Todos los campos son requeridos" }, { status: 400 })
+    }
+    if (password.length < 6) {
+      return NextResponse.json({ error: "La contraseña debe tener al menos 6 caracteres" }, { status: 400 })
     }
 
     await connectDB()
@@ -20,7 +49,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "El correo ya está registrado" }, { status: 409 })
     }
 
-    // Generar etiqueta única: nombre.apellido
     const baseEtiqueta = `${nombre.toLowerCase().trim().replace(/\s+/g, "")}.${apellido.toLowerCase().trim().replace(/\s+/g, "")}`
     let etiqueta = baseEtiqueta
     let suffix = 1
@@ -29,8 +57,6 @@ export async function POST(req: NextRequest) {
     }
 
     const hash = await bcrypt.hash(password, 10)
-
-    // Crear tag en HubSpot para este aliado
     const hubspotTagId = await createAliaoTag(etiqueta)
 
     const user = await User.create({
@@ -40,33 +66,23 @@ export async function POST(req: NextRequest) {
       password: hash,
       etiqueta,
       hubspotTagId: hubspotTagId ?? etiqueta,
+      role: "aliado",
     })
 
-    const token = signToken({
-      userId:   user._id.toString(),
-      email:    user.email,
-      etiqueta: user.etiqueta,
-      nombre:   user.nombre,
-      apellido: user.apellido,
-      role:     "aliado",
-    })
-
-    const res = NextResponse.json({
+    return NextResponse.json({
       ok: true,
-      user: { nombre: user.nombre, apellido: user.apellido, email: user.email, etiqueta: user.etiqueta },
+      aliado: {
+        _id: user._id,
+        nombre: user.nombre,
+        apellido: user.apellido,
+        email: user.email,
+        etiqueta: user.etiqueta,
+        activo: user.activo,
+        createdAt: user.createdAt,
+      },
     })
-
-    res.cookies.set(cookieName(), token, {
-      httpOnly: true,
-      secure:   process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge:   60 * 60 * 24 * 7,
-      path:     "/",
-    })
-
-    return res
   } catch (err) {
-    console.error("[register]", err)
+    console.error("[admin/aliados POST]", err)
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
   }
 }

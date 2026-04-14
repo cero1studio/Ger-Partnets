@@ -34,11 +34,13 @@ export async function POST(req: NextRequest) {
       etiqueta: user.etiqueta,
       nombre:   user.nombre,
       apellido: user.apellido,
+      role:     user.role ?? "aliado",
     })
 
     const res = NextResponse.json({
       ok: true,
-      user: { nombre: user.nombre, apellido: user.apellido, email: user.email, etiqueta: user.etiqueta },
+      role: user.role ?? "aliado",
+      user: { nombre: user.nombre, apellido: user.apellido, email: user.email, etiqueta: user.etiqueta, role: user.role ?? "aliado" },
     })
 
     res.cookies.set(cookieName(), token, {
