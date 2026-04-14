@@ -38,6 +38,14 @@ import {
   Mail,
   MapPin,
   Calendar,
+  ChevronRight,
+  ChevronLeft,
+  CheckCircle2,
+  Briefcase,
+  GraduationCap,
+  Globe2,
+  DollarSign,
+  FileText
 } from "lucide-react"
 
 type Lead = {
@@ -271,11 +279,11 @@ export default function DashboardPage() {
 
       {/* Pipeline Kanban - horizontal scroll on body */}
       <div className="overflow-x-auto pb-4 -mx-4 sm:-mx-6 px-4 sm:px-6">
-        <div className="flex gap-4 min-w-max">
+          <div className="flex gap-4 min-w-max pb-2">
           {etapas.map((etapa) => (
             <div key={etapa.id} className="w-72 sm:w-80 shrink-0">
-              <Card className="bg-muted/30">
-                <CardHeader className="pb-3">
+              <Card className="bg-muted/30 border-muted-foreground/10">
+                <CardHeader className="pb-3 px-4 pt-4">
                   <div className="flex items-center gap-2">
                     <div className={`w-3 h-3 rounded-full ${etapa.color}`} />
                     <CardTitle className="text-sm font-medium">{etapa.nombre}</CardTitle>
