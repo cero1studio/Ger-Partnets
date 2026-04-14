@@ -1,13 +1,12 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
@@ -39,9 +38,6 @@ import {
   Mail,
   MapPin,
   Calendar,
-  Upload,
-  X,
-  FileText,
   MessageSquare,
   Video,
   User,
@@ -314,8 +310,6 @@ export default function DashboardPage() {
   const [leads, setLeads] = useState<Lead[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
-  const [cvFile, setCvFile] = useState<File | null>(null)
-  const [isDragging, setIsDragging] = useState(false)
   
   useEffect(() => {
     const storedUser = localStorage.getItem("ger_demo_user") || "demo@ger.com"
@@ -343,32 +337,6 @@ export default function DashboardPage() {
     notas: "",
   })
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }, [])
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-  }, [])
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-    const file = e.dataTransfer.files[0]
-    if (file && file.type === "application/pdf") {
-      setCvFile(file)
-    }
-  }, [])
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file && file.type === "application/pdf") {
-      setCvFile(file)
-    }
-  }
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -377,13 +345,18 @@ export default function DashboardPage() {
       nombre: `${formData.nombre} ${formData.apellido}`,
       email: formData.email,
       telefono: formData.telefono,
+      ciudad: formData.ciudad,
       nacionalidad: formData.nacionalidad,
       programa: formData.programa,
       etapa: "appointmentscheduled",
       fechaRegistro: new Date().toLocaleDateString("es-ES"),
-      tieneEB3: formData.tieneEB3,
+      tuvoVisa: formData.tuvoVisa,
+      tipoVisa: formData.tuvoVisa ? formData.tipoVisa : undefined,
+      puedeCubrirCostos: formData.puedeCubrirCostos,
+      aceptaInversion: formData.puedeCubrirCostos === "con-financiamiento",
+      profesion: formData.profesion,
+      nivelEscolaridad: formData.nivelEscolaridad,
       nucleoFamiliar: parseInt(formData.nucleoFamiliar),
-      dedicacion: formData.dedicacion,
       notas: formData.notas,
       responsable: "Sin asignar",
       comentarios: [],
@@ -401,14 +374,18 @@ export default function DashboardPage() {
       apellido: "",
       email: "",
       telefono: "",
+      ciudad: "",
       nacionalidad: "",
       programa: "",
-      tieneEB3: false,
+      tuvoVisa: false,
+      tipoVisa: "",
+      puedeCubrirCostos: "",
+      aceptaInversion: false,
+      profesion: "",
+      nivelEscolaridad: "",
       nucleoFamiliar: "1",
-      dedicacion: "full-time",
       notas: "",
     })
-    setCvFile(null)
   }
 
   const getLeadsByEtapa = (etapaId: string) => {
@@ -448,13 +425,6 @@ export default function DashboardPage() {
                 <LeadForm 
                   formData={formData}
                   setFormData={setFormData}
-                  cvFile={cvFile}
-                  setCvFile={setCvFile}
-                  isDragging={isDragging}
-                  handleDragOver={handleDragOver}
-                  handleDragLeave={handleDragLeave}
-                  handleDrop={handleDrop}
-                  handleFileChange={handleFileChange}
                   handleSubmit={handleSubmit}
                   onCancel={() => { setIsDialogOpen(false); resetForm(); }}
                 />
@@ -496,13 +466,6 @@ export default function DashboardPage() {
             <LeadForm 
               formData={formData}
               setFormData={setFormData}
-              cvFile={cvFile}
-              setCvFile={setCvFile}
-              isDragging={isDragging}
-              handleDragOver={handleDragOver}
-              handleDragLeave={handleDragLeave}
-              handleDrop={handleDrop}
-              handleFileChange={handleFileChange}
               handleSubmit={handleSubmit}
               onCancel={() => { setIsDialogOpen(false); resetForm(); }}
             />
@@ -663,16 +626,32 @@ function LeadDetail({ lead, onClose }: { lead: Lead; onClose: () => void }) {
             <p className="font-medium">{lead.programa}</p>
           </div>
           <div>
-            <p className="text-muted-foreground text-xs">Capacidad EB-3</p>
-            <p className="font-medium">{lead.tieneEB3 ? "Sí" : "No"}</p>
-          </div>
-          <div>
             <p className="text-muted-foreground text-xs">Núcleo Familiar</p>
             <p className="font-medium">{lead.nucleoFamiliar} personas</p>
           </div>
           <div>
-            <p className="text-muted-foreground text-xs">Dedicación</p>
-            <p className="font-medium">{lead.dedicacion === "full-time" ? "Tiempo completo" : "Medio tiempo"}</p>
+            <p className="text-muted-foreground text-xs">Tuvo visa</p>
+            <p className="font-medium">
+              {lead.tuvoVisa ? `Sí${lead.tipoVisa ? ` — ${lead.tipoVisa}` : ""}` : "No"}
+            </p>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-xs">Cubre costos ($23,990)</p>
+            <p className="font-medium">
+              {lead.puedeCubrirCostos === "si"
+                ? "Sí"
+                : lead.puedeCubrirCostos === "con-financiamiento"
+                ? "Con financiamiento"
+                : "No"}
+            </p>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-xs">Profesión</p>
+            <p className="font-medium">{lead.profesion || "—"}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-xs">Escolaridad</p>
+            <p className="font-medium">{lead.nivelEscolaridad || "—"}</p>
           </div>
         </div>
       </div>
@@ -770,38 +749,34 @@ type LeadFormProps = {
     apellido: string
     email: string
     telefono: string
+    ciudad: string
     nacionalidad: string
     programa: string
-    tieneEB3: boolean
+    tuvoVisa: boolean
+    tipoVisa: string
+    puedeCubrirCostos: string
+    aceptaInversion: boolean
+    profesion: string
+    nivelEscolaridad: string
     nucleoFamiliar: string
-    dedicacion: string
     notas: string
   }
   setFormData: React.Dispatch<React.SetStateAction<LeadFormProps["formData"]>>
-  cvFile: File | null
-  setCvFile: React.Dispatch<React.SetStateAction<File | null>>
-  isDragging: boolean
-  handleDragOver: (e: React.DragEvent) => void
-  handleDragLeave: (e: React.DragEvent) => void
-  handleDrop: (e: React.DragEvent) => void
-  handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void
   handleSubmit: (e: React.FormEvent) => void
   onCancel: () => void
 }
 
-function LeadForm({
-  formData,
-  setFormData,
-  cvFile,
-  setCvFile,
-  isDragging,
-  handleDragOver,
-  handleDragLeave,
-  handleDrop,
-  handleFileChange,
-  handleSubmit,
-  onCancel,
-}: LeadFormProps) {
+const nivelesEscolaridad = [
+  "Primaria",
+  "Bachillerato",
+  "Técnico",
+  "Tecnólogo",
+  "Universitario",
+  "Posgrado",
+  "Otro",
+]
+
+function LeadForm({ formData, setFormData, handleSubmit, onCancel }: LeadFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {/* Información Básica */}
@@ -895,28 +870,104 @@ function LeadForm({
         </div>
       </div>
 
-      {/* Calificación */}
+      {/* Perfilamiento */}
       <div className="space-y-4">
         <h3 className="text-sm font-semibold text-foreground border-b pb-2">
-          Información Adicional
+          Perfilamiento
         </h3>
 
-        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-          <div>
-            <Label htmlFor="tieneEB3" className="text-sm font-medium">
-              Capacidad para programa EB-3
-            </Label>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              El candidato cumple requisitos básicos
-            </p>
-          </div>
-          <Switch
-            id="tieneEB3"
-            checked={formData.tieneEB3}
-            onCheckedChange={(checked) => setFormData({ ...formData, tieneEB3: checked })}
-          />
+        {/* Visa */}
+        <div className="space-y-2">
+          <Label>¿Ha tenido visa anteriormente? *</Label>
+          <RadioGroup
+            value={formData.tuvoVisa ? "si" : "no"}
+            onValueChange={(v) =>
+              setFormData({ ...formData, tuvoVisa: v === "si", tipoVisa: v === "no" ? "" : formData.tipoVisa })
+            }
+            className="flex gap-6"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="si" id="visa-si" />
+              <Label htmlFor="visa-si" className="font-normal cursor-pointer">Sí</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="no" id="visa-no" />
+              <Label htmlFor="visa-no" className="font-normal cursor-pointer">No</Label>
+            </div>
+          </RadioGroup>
         </div>
 
+        {formData.tuvoVisa && (
+          <div className="space-y-2">
+            <Label htmlFor="tipoVisa">¿Qué tipo de visa?</Label>
+            <Input
+              id="tipoVisa"
+              placeholder="Ej: B1/B2 Turista, H-1B, etc."
+              value={formData.tipoVisa}
+              onChange={(e) => setFormData({ ...formData, tipoVisa: e.target.value })}
+            />
+          </div>
+        )}
+
+        {/* Capacidad económica */}
+        <div className="space-y-2">
+          <Label>¿Puede cubrir el costo del servicio? *</Label>
+          <p className="text-xs text-muted-foreground -mt-1">
+            El costo total del servicio es de <span className="font-semibold text-foreground">$23,990 USD</span>.
+          </p>
+          <RadioGroup
+            value={formData.puedeCubrirCostos}
+            onValueChange={(v) => setFormData({ ...formData, puedeCubrirCostos: v })}
+            className="space-y-2 mt-2"
+            required
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="si" id="costos-si" />
+              <Label htmlFor="costos-si" className="font-normal cursor-pointer">Sí, puede cubrir el costo</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="con-financiamiento" id="costos-financiamiento" />
+              <Label htmlFor="costos-financiamiento" className="font-normal cursor-pointer">Necesita financiamiento</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="no" id="costos-no" />
+              <Label htmlFor="costos-no" className="font-normal cursor-pointer">No puede cubrir el costo</Label>
+            </div>
+          </RadioGroup>
+        </div>
+
+        {/* Profesión y Escolaridad */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label htmlFor="profesion">Profesión *</Label>
+            <Input
+              id="profesion"
+              placeholder="Ej: Electricista"
+              value={formData.profesion}
+              onChange={(e) => setFormData({ ...formData, profesion: e.target.value })}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Nivel de Escolaridad *</Label>
+            <Select
+              value={formData.nivelEscolaridad}
+              onValueChange={(value) => setFormData({ ...formData, nivelEscolaridad: value })}
+              required
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar" />
+              </SelectTrigger>
+              <SelectContent>
+                {nivelesEscolaridad.map((nivel) => (
+                  <SelectItem key={nivel} value={nivel}>{nivel}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Núcleo familiar */}
         <div className="space-y-2">
           <Label>Núcleo Familiar (incluyendo al candidato)</Label>
           <Select
@@ -934,74 +985,6 @@ function LeadForm({
               ))}
             </SelectContent>
           </Select>
-        </div>
-
-        <div className="space-y-3">
-          <Label>Disponibilidad de Dedicación</Label>
-          <RadioGroup
-            value={formData.dedicacion}
-            onValueChange={(value) => setFormData({ ...formData, dedicacion: value })}
-            className="flex gap-4"
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="full-time" id="full-time" />
-              <Label htmlFor="full-time" className="font-normal cursor-pointer">Tiempo completo</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="part-time" id="part-time" />
-              <Label htmlFor="part-time" className="font-normal cursor-pointer">Medio tiempo</Label>
-            </div>
-          </RadioGroup>
-        </div>
-      </div>
-
-      {/* CV Upload */}
-      <div className="space-y-3">
-        <Label>Currículum (PDF)</Label>
-        <div
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-            isDragging ? "border-primary bg-primary/5" : "border-border"
-          }`}
-        >
-          {cvFile ? (
-            <div className="flex items-center justify-center gap-3">
-              <FileText className="w-8 h-8 text-primary" />
-              <div className="text-left">
-                <p className="text-sm font-medium">{cvFile.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {(cvFile.size / 1024 / 1024).toFixed(2)} MB
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="ml-2"
-                onClick={() => setCvFile(null)}
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          ) : (
-            <>
-              <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground mb-1">
-                Arrastra el archivo aquí o
-              </p>
-              <label className="text-sm text-primary hover:underline cursor-pointer">
-                selecciona un archivo
-                <input
-                  type="file"
-                  accept=".pdf"
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
-              </label>
-            </>
-          )}
         </div>
       </div>
 
