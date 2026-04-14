@@ -68,13 +68,18 @@ type Lead = {
   nombre: string
   email: string
   telefono: string
+  ciudad: string
   nacionalidad: string
   programa: string
   etapa: string
   fechaRegistro: string
-  tieneEB3: boolean
+  tuvoVisa: boolean
+  tipoVisa?: string
+  puedeCubrirCostos: string
+  aceptaInversion: boolean
+  profesion: string
+  nivelEscolaridad: string
   nucleoFamiliar: number
-  dedicacion: string
   notas?: string
   responsable: string
   comentarios?: Comment[]
@@ -121,13 +126,18 @@ const demoUsers = {
         nombre: "María González",
         email: "maria.gonzalez@email.com",
         telefono: "+58 424 123 4567",
+        ciudad: "Caracas",
         nacionalidad: "Venezuela",
         programa: "EB-3 Unskilled Worker",
         etapa: "contacto-inicial",
         fechaRegistro: "10/04/2026",
-        tieneEB3: true,
+        tuvoVisa: true,
+        tipoVisa: "B1/B2 Turista",
+        puedeCubrirCostos: "si",
+        aceptaInversion: true,
+        profesion: "Administradora",
+        nivelEscolaridad: "Universitario",
         nucleoFamiliar: 4,
-        dedicacion: "full-time",
         notas: "Interesada en trabajos de procesamiento de alimentos",
         responsable: "Ana García",
         comentarios: [
@@ -143,13 +153,18 @@ const demoUsers = {
         nombre: "Roberto Herrera",
         email: "roberto.h@gmail.com",
         telefono: "+57 311 987 6543",
+        ciudad: "Bogotá",
         nacionalidad: "Colombia",
         programa: "EB-3 Skilled Worker",
         etapa: "perfilamiento",
         fechaRegistro: "08/04/2026",
-        tieneEB3: true,
+        tuvoVisa: true,
+        tipoVisa: "H-1B",
+        puedeCubrirCostos: "si",
+        aceptaInversion: true,
+        profesion: "Ingeniero Industrial",
+        nivelEscolaridad: "Posgrado",
         nucleoFamiliar: 2,
-        dedicacion: "full-time",
         notas: "Ingeniero industrial con 5 años de experiencia",
         responsable: "Luis Martínez",
         comentarios: [
@@ -164,13 +179,17 @@ const demoUsers = {
         nombre: "Ana Martínez",
         email: "ana.martinez@outlook.com",
         telefono: "+52 55 8765 4321",
+        ciudad: "Ciudad de México",
         nacionalidad: "México",
         programa: "EB-3 Unskilled Worker",
         etapa: "reunion-asesoria",
         fechaRegistro: "01/04/2026",
-        tieneEB3: true,
+        tuvoVisa: false,
+        puedeCubrirCostos: "con-financiamiento",
+        aceptaInversion: true,
+        profesion: "Técnica en Enfermería",
+        nivelEscolaridad: "Técnico",
         nucleoFamiliar: 3,
-        dedicacion: "full-time",
         notas: "Disponibilidad inmediata",
         responsable: "Carmen López",
         comentarios: [
@@ -186,13 +205,18 @@ const demoUsers = {
         nombre: "Luis Fernández",
         email: "luis.f@email.com",
         telefono: "+51 999 111 2222",
+        ciudad: "Lima",
         nacionalidad: "Perú",
         programa: "EB-3 Skilled Worker",
         etapa: "pago-g1",
         fechaRegistro: "15/03/2026",
-        tieneEB3: true,
+        tuvoVisa: true,
+        tipoVisa: "B1/B2 Turista",
+        puedeCubrirCostos: "si",
+        aceptaInversion: true,
+        profesion: "Técnico en Soldadura",
+        nivelEscolaridad: "Técnico",
         nucleoFamiliar: 5,
-        dedicacion: "full-time",
         notas: "Técnico en soldadura certificado",
         responsable: "Ana García",
         comentarios: [
@@ -205,13 +229,17 @@ const demoUsers = {
         nombre: "Carmen Rojas",
         email: "carmen.rojas@gmail.com",
         telefono: "+593 98 765 4321",
+        ciudad: "Guayaquil",
         nacionalidad: "Ecuador",
         programa: "EB-3 Unskilled Worker",
         etapa: "lead-ganado",
         fechaRegistro: "01/03/2026",
-        tieneEB3: true,
+        tuvoVisa: false,
+        puedeCubrirCostos: "si",
+        aceptaInversion: true,
+        profesion: "Operaria de Producción",
+        nivelEscolaridad: "Bachillerato",
         nucleoFamiliar: 2,
-        dedicacion: "full-time",
         notas: "Proceso completado exitosamente",
         responsable: "Luis Martínez",
         comentarios: [
@@ -226,13 +254,17 @@ const demoUsers = {
         nombre: "Pedro Sánchez",
         email: "pedro.s@hotmail.com",
         telefono: "+58 412 333 4444",
+        ciudad: "Maracaibo",
         nacionalidad: "Venezuela",
         programa: "H-2B Visa",
         etapa: "no-contesta",
         fechaRegistro: "12/04/2026",
-        tieneEB3: false,
+        tuvoVisa: false,
+        puedeCubrirCostos: "no",
+        aceptaInversion: false,
+        profesion: "Electricista",
+        nivelEscolaridad: "Bachillerato",
         nucleoFamiliar: 1,
-        dedicacion: "part-time",
         notas: "",
         responsable: "Carmen López",
         comentarios: [
@@ -245,13 +277,18 @@ const demoUsers = {
         nombre: "Isabella Torres",
         email: "isabella.t@email.com",
         telefono: "+57 320 555 6666",
+        ciudad: "Medellín",
         nacionalidad: "Colombia",
         programa: "EB-3 Unskilled Worker",
         etapa: "seguimiento",
         fechaRegistro: "05/04/2026",
-        tieneEB3: true,
+        tuvoVisa: true,
+        tipoVisa: "B1/B2 Turista",
+        puedeCubrirCostos: "si",
+        aceptaInversion: true,
+        profesion: "Auxiliar Contable",
+        nivelEscolaridad: "Técnico",
         nucleoFamiliar: 3,
-        dedicacion: "full-time",
         notas: "Referencias laborales verificadas",
         responsable: "Ana García",
         comentarios: [
@@ -292,11 +329,16 @@ export default function DashboardPage() {
     apellido: "",
     email: "",
     telefono: "",
+    ciudad: "",
     nacionalidad: "",
     programa: "",
-    tieneEB3: false,
+    tuvoVisa: false,
+    tipoVisa: "",
+    puedeCubrirCostos: "",
+    aceptaInversion: false,
+    profesion: "",
+    nivelEscolaridad: "",
     nucleoFamiliar: "1",
-    dedicacion: "full-time",
     notas: "",
   })
 
