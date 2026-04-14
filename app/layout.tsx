@@ -7,9 +7,21 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'G.E.R. Partner Pipeline | Portal de Aliados Estratégicos',
-  description: 'Plataforma de gestión de leads y referidos para Global Express Recruiting',
-  generator: 'v0.app',
+  title: 'Portal de Aliados Estratégicos | Global Express',
+  description: 'Plataforma de gestión de leads y referidos para aliados estratégicos de Global Express. Registra referidos, monitorea estatus y accede a herramientas exclusivas.',
+  metadataBase: new URL('https://partners.globalexpress.com'),
+  openGraph: {
+    title: 'Portal de Aliados Estratégicos | Global Express',
+    description: 'Plataforma de gestión de leads y referidos para aliados estratégicos de Global Express.',
+    type: 'website',
+    locale: 'es_ES',
+    siteName: 'Global Express – Área Digital',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Portal de Aliados Estratégicos | Global Express',
+    description: 'Plataforma de gestión de leads y referidos para aliados estratégicos de Global Express.',
+  },
   icons: {
     icon: [
       {

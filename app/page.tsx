@@ -71,12 +71,11 @@ export default function LoginPage() {
         <div className="flex items-center gap-3">
           <Image 
             src="/logo.png" 
-            alt="G.E.R." 
+            alt="Global Express" 
             width={48} 
             height={48}
             className="h-12 w-auto"
           />
-          <span className="text-xl font-bold text-primary-foreground">G.E.R.</span>
         </div>
         
         <div className="space-y-8">
@@ -116,12 +115,11 @@ export default function LoginPage() {
           <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
             <Image 
               src="/logo.png" 
-              alt="G.E.R." 
+              alt="Global Express" 
               width={48} 
               height={48}
               className="h-12 w-auto"
             />
-            <span className="text-xl font-bold text-foreground">G.E.R.</span>
           </div>
 
           <Card className="border-0 shadow-xl">

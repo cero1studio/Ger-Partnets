@@ -74,7 +74,7 @@ export default function DashboardLayout({
           <Link href="/dashboard" className="flex items-center">
             <Image 
               src="/logo.png" 
-              alt="G.E.R." 
+              alt="Global Express" 
               width={40} 
               height={40}
               className="h-10 w-auto shrink-0"
