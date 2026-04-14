@@ -1,21 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { Textarea } from "@/components/ui/text-area"
 import {
   Dialog,
   DialogContent,
@@ -25,12 +17,20 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   UserPlus,
   Users,
@@ -42,7 +42,6 @@ import {
   ChevronLeft,
   CheckCircle2,
   Briefcase,
-  GraduationCap,
   Globe2,
   DollarSign,
   FileText
@@ -60,50 +59,42 @@ type Lead = {
   notas?: string
 }
 
-// Etapas de HubSpot — IDs reales del pipeline "Funnel de ventas" (id: default)
-// Obtenidos con scripts/explore-hubspot.mjs
+// Map actual pipeline stages using their native HubSpot IDs
 const etapas = [
-  { id: "appointmentscheduled", nombre: "Contacto inicial",  color: "bg-blue-500" },
-  { id: "qualifiedtobuy",       nombre: "No contesta",       color: "bg-gray-400" },
-  { id: "presentationscheduled",nombre: "Perfilamiento",     color: "bg-yellow-500" },
-  { id: "decisionmakerboughtin",nombre: "Reunión asesoría",  color: "bg-orange-500" },
-  { id: "1226150813",           nombre: "Seguimiento",       color: "bg-cyan-500" },
-  { id: "contractsent",         nombre: "Prospecto",         color: "bg-indigo-500" },
-  { id: "closedwon",            nombre: "Pago G1",           color: "bg-purple-500" },
-  { id: "closedlost",           nombre: "Pago programa",     color: "bg-pink-500" },
-  { id: "1062656363",           nombre: "Retargeting",       color: "bg-amber-500" },
-  { id: "1062656364",           nombre: "Lead ganado",       color: "bg-green-500" },
-  { id: "1062656365",           nombre: "Lead perdido",      color: "bg-red-500" },
+  { id: "appointmentscheduled", nombre: "Contacto inicial", color: "bg-blue-500" },
+  { id: "qualifiedtobuy", nombre: "No contesta", color: "bg-orange-500" },
+  { id: "presentationscheduled", nombre: "Perfilamiento", color: "bg-purple-500" },
+  { id: "decisionmakerboughtin", nombre: "Reunión asesoría", color: "bg-indigo-500" },
+  { id: "1226150813", nombre: "Seguimiento", color: "bg-cyan-500" },
+  { id: "contractsent", nombre: "Prospecto", color: "bg-pink-500" },
+  { id: "closedwon", nombre: "Pago G1", color: "bg-emerald-500" },
+  { id: "closedlost", nombre: "Pago programa", color: "bg-green-600" },
+  { id: "1062656363", nombre: "Retargeting", color: "bg-yellow-500" },
+  { id: "1062656364", nombre: "Lead ganado", color: "bg-green-700" },
+  { id: "1062656365", nombre: "Lead perdido", color: "bg-red-500" },
 ]
-
-const nacionalidades = [
-  "Venezuela", "Colombia", "México", "Argentina", "Perú", "Ecuador", "Chile",
-  "República Dominicana", "Cuba", "Honduras", "Guatemala", "El Salvador",
-  "Nicaragua", "Costa Rica", "Panamá", "Bolivia", "Paraguay", "Uruguay", "Brasil", "Otro",
-]
-
-const programas = [
-  "EB-3 Skilled Worker",
-  "EB-3 Unskilled Worker",
-  "H-2B Visa",
-  "Otro",
-]
-
 
 export default function DashboardPage() {
+  const router = useRouter()
   const [leads, setLeads] = useState<Lead[]>([])
+  const [loadingLeads, setLoadingLeads] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
-  const [loadingLeads, setLoadingLeads] = useState(true)
-
+  
+  // Fetch real leads
   useEffect(() => {
     fetch("/api/leads")
-      .then(r => r.ok ? r.json() : { leads: [] })
-      .then(data => setLeads(data.leads ?? []))
-      .catch(() => setLeads([]))
-      .finally(() => setLoadingLeads(false))
-  }, [])
-  
+      .then(r => {
+        if (r.status === 401) { router.push("/"); return null }
+        return r.json()
+      })
+      .then(data => {
+        if (data?.leads) setLeads(data.leads)
+        setLoadingLeads(false)
+      })
+      .catch(() => setLoadingLeads(false))
+  }, [router])
+
   // Form state
   const [formData, setFormData] = useState({
     nombre: "",
@@ -112,10 +103,9 @@ export default function DashboardPage() {
     telefono: "",
     nacionalidad: "",
     programa: "",
-    tuvoVisa: false,
+    tuvoVisa: false as boolean | null,
     tipoVisa: "",
     puedeCubrirCostos: "",
-    aceptaInversion: false,
     profesion: "",
     nivelEscolaridad: "",
     nucleoFamiliar: "1",
@@ -148,7 +138,6 @@ export default function DashboardPage() {
         }),
       })
       if (res.ok) {
-        // Recargar leads desde HubSpot
         const updated = await fetch("/api/leads").then(r => r.json())
         setLeads(updated.leads ?? [])
         setIsDialogOpen(false)
@@ -170,7 +159,6 @@ export default function DashboardPage() {
       tuvoVisa: false,
       tipoVisa: "",
       puedeCubrirCostos: "",
-      aceptaInversion: false,
       profesion: "",
       nivelEscolaridad: "",
       nucleoFamiliar: "1",
@@ -182,7 +170,6 @@ export default function DashboardPage() {
     return leads.filter((lead) => lead.etapa === etapaId)
   }
 
-  // Loading state
   if (loadingLeads) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
@@ -194,7 +181,6 @@ export default function DashboardPage() {
     )
   }
 
-  // Empty State
   if (leads.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] p-4 sm:p-6">
@@ -203,9 +189,7 @@ export default function DashboardPage() {
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
               <Users className="w-8 h-8 text-primary" />
             </div>
-            <h2 className="text-xl font-semibold text-foreground mb-2">
-              Aún no tienes referidos
-            </h2>
+            <h2 className="text-xl font-semibold text-foreground mb-2">Aún no tienes referidos</h2>
             <p className="text-muted-foreground mb-8 text-sm leading-relaxed">
               Comienza agregando tu primer referido y podrás darle seguimiento a su proceso de aplicación.
             </p>
@@ -217,13 +201,7 @@ export default function DashboardPage() {
                   Agregar Primer Referido
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Nuevo Referido</DialogTitle>
-                  <DialogDescription>
-                    Completa la información del candidato que deseas referir.
-                  </DialogDescription>
-                </DialogHeader>
+              <DialogContent className="max-w-xl max-h-[90vh] overflow-hidden flex flex-col p-0">
                 <LeadForm 
                   formData={formData}
                   setFormData={setFormData}
@@ -239,10 +217,8 @@ export default function DashboardPage() {
     )
   }
 
-  // Pipeline View with leads
   return (
     <div className="p-4 sm:p-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Mis Referidos</h1>
@@ -259,13 +235,7 @@ export default function DashboardPage() {
               <span className="sm:hidden">Agregar</span>
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Nuevo Referido</DialogTitle>
-              <DialogDescription>
-                Completa la información del candidato que deseas referir.
-              </DialogDescription>
-            </DialogHeader>
+          <DialogContent className="max-w-xl max-h-[90vh] overflow-hidden flex flex-col p-0">
             <LeadForm 
               formData={formData}
               setFormData={setFormData}
@@ -277,7 +247,6 @@ export default function DashboardPage() {
         </Dialog>
       </div>
 
-      {/* Pipeline Kanban - horizontal scroll on body */}
       <div className="overflow-x-auto pb-4 -mx-4 sm:-mx-6 px-4 sm:px-6">
           <div className="flex gap-4 min-w-max pb-2">
           {etapas.map((etapa) => (
@@ -308,7 +277,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Lead Detail Sheet */}
       <Sheet open={!!selectedLead} onOpenChange={(open) => !open && setSelectedLead(null)}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           {selectedLead && <LeadDetail lead={selectedLead} onClose={() => setSelectedLead(null)} />}
@@ -377,7 +345,6 @@ function LeadDetail({ lead }: { lead: Lead; onClose: () => void }) {
         <SheetDescription>Detalle del candidato referido</SheetDescription>
       </SheetHeader>
 
-      {/* Contacto */}
       <div className="space-y-2">
         <h3 className="text-sm font-semibold text-foreground border-b pb-2">Contacto</h3>
         <div className="grid gap-2 text-sm">
@@ -402,7 +369,6 @@ function LeadDetail({ lead }: { lead: Lead; onClose: () => void }) {
         </div>
       </div>
 
-      {/* Notas / Perfilamiento (guardado en description de HubSpot) */}
       {lead.notas && (
         <div className="space-y-2">
           <h3 className="text-sm font-semibold text-foreground border-b pb-2">Perfilamiento</h3>
@@ -411,39 +377,11 @@ function LeadDetail({ lead }: { lead: Lead; onClose: () => void }) {
           </div>
         </div>
       )}
-
-      {/* Registro */}
-      <div className="pt-2 border-t text-xs text-muted-foreground flex items-center gap-1">
-        <Calendar className="w-3 h-3" />
-        Registrado el {lead.fechaRegistro}
-      </div>
     </div>
   )
 }
 
-type LeadFormProps = {
-  formData: {
-    nombre: string
-    apellido: string
-    email: string
-    telefono: string
-    ciudad: string
-    nacionalidad: string
-    programa: string
-    tuvoVisa: boolean
-    tipoVisa: string
-    puedeCubrirCostos: string
-    aceptaInversion: boolean
-    profesion: string
-    nivelEscolaridad: string
-    nucleoFamiliar: string
-    notas: string
-  }
-  setFormData: React.Dispatch<React.SetStateAction<LeadFormProps["formData"]>>
-  handleSubmit: (e: React.FormEvent) => void
-  onCancel: () => void
-  isSaving?: boolean
-}
+// ─── COMPONENTE WIZARD ──────────────────────────────────────
 
 const nivelesEscolaridad = [
   "Primaria",
@@ -455,243 +393,401 @@ const nivelesEscolaridad = [
   "Otro",
 ]
 
+const programas = [
+  "EB-3 Visa (Trabajadores no calificados)",
+  "EB-2 NIW (Profesionales con posgrado)",
+  "L-1 (Transferencia ejecutivos)",
+  "E-2 (Inversionistas)",
+  "Otro",
+]
+
+const paises = [
+  "Colombia",
+  "México",
+  "Perú",
+  "Ecuador",
+  "Chile",
+  "Argentina",
+  "España",
+  "Otro",
+]
+
+type LeadFormProps = {
+  formData: any
+  setFormData: any
+  handleSubmit: (e: React.FormEvent) => void
+  onCancel: () => void
+  isSaving?: boolean
+}
+
 function LeadForm({ formData, setFormData, handleSubmit, onCancel, isSaving }: LeadFormProps) {
+  const [step, setStep] = useState(1)
+
+  const validateStep1 = () => {
+    return formData.nombre.trim() !== "" && 
+           formData.apellido.trim() !== "" && 
+           formData.email.trim() !== "" && 
+           formData.telefono.trim() !== ""
+  }
+
+  const validateStep2 = () => {
+    return formData.nacionalidad !== "" && 
+           formData.programa !== "" && 
+           (formData.tuvoVisa === false || (formData.tuvoVisa === true && formData.tipoVisa.trim() !== ""))
+  }
+
+  const handleNext = (e: React.MouseEvent) => {
+    e.preventDefault()
+    if (step === 1 && validateStep1()) setStep(2)
+    else if (step === 2 && validateStep2()) setStep(3)
+  }
+
+  const handleBack = (e: React.MouseEvent) => {
+    e.preventDefault()
+    if (step > 1) setStep(step - 1)
+  }
+
+  const SelectCard = ({ 
+    selected, onClick, icon: Icon, title, desc 
+  }: { 
+    selected: boolean, onClick: () => void, icon: any, title: string, desc?: string 
+  }) => (
+    <div 
+      onClick={onClick}
+      className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
+        selected 
+          ? "border-primary bg-primary/5 shadow-sm" 
+          : "border-border hover:border-primary/30 hover:bg-muted/50"
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <div className={`p-2 rounded-lg shrink-0 ${selected ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+          <Icon className="w-5 h-5" />
+        </div>
+        <div className="flex-1 min-w-0 pr-6">
+          <h4 className={`font-semibold text-sm ${selected ? "text-primary" : "text-foreground"}`}>{title}</h4>
+          {desc && <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{desc}</p>}
+        </div>
+        {selected && (
+          <CheckCircle2 className="w-5 h-5 text-primary absolute top-4 right-4 animate-in zoom-in" />
+        )}
+      </div>
+    </div>
+  )
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Información Básica */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-foreground border-b pb-2">
-          Información Básica
-        </h3>
-        
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label htmlFor="nombre">Nombre *</Label>
-            <Input
-              id="nombre"
-              placeholder="Juan"
-              value={formData.nombre}
-              onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-              required
-            />
+    <form onSubmit={handleSubmit} className="flex flex-col h-[75vh] sm:h-[650px] bg-background">
+      {/* Header Modal - Progress */}
+      <div className="px-6 py-4 border-b bg-muted/10 shrink-0">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Nuevo Referido</h2>
+            <p className="text-sm font-medium text-muted-foreground mt-0.5">
+              {step === 1 ? "Contacto básico" : step === 2 ? "Perfil migratorio" : "Viabilidad"}
+            </p>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="apellido">Apellido *</Label>
-            <Input
-              id="apellido"
-              placeholder="Pérez"
-              value={formData.apellido}
-              onChange={(e) => setFormData({ ...formData, apellido: e.target.value })}
-              required
-            />
+          <div className="text-right">
+            <span className="text-sm font-bold text-primary bg-primary/10 px-3 py-1 rounded-full">
+              Paso {step} de 3
+            </span>
           </div>
         </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="email">Correo Electrónico *</Label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="correo@ejemplo.com"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            required
+        <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-primary transition-all duration-500 ease-out"
+            style={{ width: `${(step / 3) * 100}%` }}
           />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="telefono">WhatsApp / Teléfono *</Label>
-          <Input
-            id="telefono"
-            type="tel"
-            placeholder="+1 (555) 123-4567"
-            value={formData.telefono}
-            onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
-            required
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label>Nacionalidad *</Label>
-            <Select
-              value={formData.nacionalidad}
-              onValueChange={(value) => setFormData({ ...formData, nacionalidad: value })}
-              required
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar" />
-              </SelectTrigger>
-              <SelectContent>
-                {nacionalidades.map((nac) => (
-                  <SelectItem key={nac} value={nac}>{nac}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Programa de Interés *</Label>
-            <Select
-              value={formData.programa}
-              onValueChange={(value) => setFormData({ ...formData, programa: value })}
-              required
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar" />
-              </SelectTrigger>
-              <SelectContent>
-                {programas.map((prog) => (
-                  <SelectItem key={prog} value={prog}>{prog}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
         </div>
       </div>
 
-      {/* Perfilamiento */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-foreground border-b pb-2">
-          Perfilamiento
-        </h3>
+      {/* Form Content - Scrollable area */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        
+        {/* PASO 1 */}
+        <div className={step === 1 ? "block animate-in fade-in slide-in-from-right-4 duration-300" : "hidden"}>
+          <div className="mb-6">
+            <h3 className="text-xl font-bold text-foreground">¿A quién vas a referir?</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Ingresa los datos exactos del candidato para que nuestro equipo pueda contactarlo.
+            </p>
+          </div>
 
-        {/* Visa */}
-        <div className="space-y-2">
-          <Label>¿Ha tenido visa anteriormente? *</Label>
-          <RadioGroup
-            value={formData.tuvoVisa ? "si" : "no"}
-            onValueChange={(v) =>
-              setFormData({ ...formData, tuvoVisa: v === "si", tipoVisa: v === "no" ? "" : formData.tipoVisa })
-            }
-            className="flex gap-6"
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="si" id="visa-si" />
-              <Label htmlFor="visa-si" className="font-normal cursor-pointer">Sí</Label>
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="nombre" className="text-xs font-bold text-foreground/80 uppercase tracking-wider">Nombre(s) *</Label>
+                <Input
+                  id="nombre"
+                  placeholder="Ej: Carlos Andrés"
+                  value={formData.nombre}
+                  onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                  className="h-12 bg-muted/20"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="apellido" className="text-xs font-bold text-foreground/80 uppercase tracking-wider">Apellido(s) *</Label>
+                <Input
+                  id="apellido"
+                  placeholder="Ej: Mendoza"
+                  value={formData.apellido}
+                  onChange={(e) => setFormData({ ...formData, apellido: e.target.value })}
+                  className="h-12 bg-muted/20"
+                />
+              </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="no" id="visa-no" />
-              <Label htmlFor="visa-no" className="font-normal cursor-pointer">No</Label>
+
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-xs font-bold text-foreground/80 uppercase tracking-wider">Correo Electrónico *</Label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="carlos@ejemplo.com"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="h-12 pl-12 bg-muted/20"
+                />
+              </div>
             </div>
-          </RadioGroup>
+
+            <div className="space-y-2">
+              <Label htmlFor="telefono" className="text-xs font-bold text-foreground/80 uppercase tracking-wider">WhatsApp / Teléfono *</Label>
+              <div className="relative">
+                <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  id="telefono"
+                  type="tel"
+                  placeholder="+1 (555) 123-4567"
+                  value={formData.telefono}
+                  onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
+                  className="h-12 pl-12 bg-muted/20"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground ml-1">Incluye el código de país (Ej: +57 para Colombia)</p>
+            </div>
+          </div>
         </div>
 
-        {formData.tuvoVisa && (
-          <div className="space-y-2">
-            <Label htmlFor="tipoVisa">¿Qué tipo de visa?</Label>
-            <Input
-              id="tipoVisa"
-              placeholder="Ej: B1/B2 Turista, H-1B, etc."
-              value={formData.tipoVisa}
-              onChange={(e) => setFormData({ ...formData, tipoVisa: e.target.value })}
-            />
+        {/* PASO 2 */}
+        <div className={step === 2 ? "block animate-in fade-in slide-in-from-right-4 duration-300" : "hidden"}>
+          <div className="mb-6">
+            <h3 className="text-xl font-bold text-foreground">El destino y el origen</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              ¿Qué programa le interesa y de dónde es el candidato?
+            </p>
           </div>
+
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-foreground/80 uppercase tracking-wider">Programa de Interés *</Label>
+              <Select value={formData.programa} onValueChange={(value) => setFormData({ ...formData, programa: value })}>
+                <SelectTrigger className="h-12 bg-muted/20 text-base">
+                  <SelectValue placeholder="Selecciona un programa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {programas.map(p => <SelectItem key={p} value={p} className="py-3">{p}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-foreground/80 uppercase tracking-wider">Nacionalidad / País *</Label>
+              <Select value={formData.nacionalidad} onValueChange={(value) => setFormData({ ...formData, nacionalidad: value })}>
+                <SelectTrigger className="h-12 bg-muted/20 text-base">
+                  <SelectValue placeholder="Selecciona el país" />
+                </SelectTrigger>
+                <SelectContent>
+                  {paises.map(p => <SelectItem key={p} value={p} className="py-3">{p}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <Label className="text-xs font-bold text-foreground/80 uppercase tracking-wider">¿Tiene o tuvo visa americana? *</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <SelectCard 
+                  selected={formData.tuvoVisa === true}
+                  onClick={() => setFormData({ ...formData, tuvoVisa: true })}
+                  icon={Globe2}
+                  title="Sí, tiene o tuvo"
+                />
+                <SelectCard 
+                  selected={formData.tuvoVisa === false}
+                  onClick={() => setFormData({ ...formData, tuvoVisa: false, tipoVisa: "" })}
+                  icon={Globe2}
+                  title="No, nunca"
+                />
+              </div>
+              
+              {formData.tuvoVisa && (
+                <div className="mt-4 p-4 bg-muted/30 rounded-xl border border-border/50 animate-in fade-in slide-in-from-top-2">
+                  <Label className="text-xs font-bold text-foreground/80 uppercase tracking-wider mb-2 block">
+                    ¿Qué tipo de visa?
+                  </Label>
+                  <Input
+                    placeholder="Ej: B1/B2 Turista, H-1B, F1..."
+                    value={formData.tipoVisa}
+                    onChange={(e) => setFormData({ ...formData, tipoVisa: e.target.value })}
+                    className="h-12 bg-background"
+                    autoFocus
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* PASO 3 */}
+        <div className={step === 3 ? "block animate-in fade-in slide-in-from-right-4 duration-300" : "hidden"}>
+          <div className="mb-6">
+            <h3 className="text-xl font-bold text-foreground">Calificación del Perfil</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Esta información es vital para perfilar y calificar al candidato.
+            </p>
+          </div>
+
+          <div className="space-y-6">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-bold text-foreground/80 uppercase tracking-wider">Capacidad económica *</Label>
+                <span className="text-[10px] font-bold bg-green-100 text-green-800 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                  Costo: $23,990 USD
+                </span>
+              </div>
+              <div className="grid gap-3">
+                <SelectCard 
+                  selected={formData.puedeCubrirCostos === "si"}
+                  onClick={() => setFormData({ ...formData, puedeCubrirCostos: "si" })}
+                  icon={DollarSign}
+                  title="Tiene el capital"
+                  desc="Puede cubrir el costo total del servicio sin problema."
+                />
+                <SelectCard 
+                  selected={formData.puedeCubrirCostos === "con-financiamiento"}
+                  onClick={() => setFormData({ ...formData, puedeCubrirCostos: "con-financiamiento" })}
+                  icon={DollarSign}
+                  title="Busca financiamiento"
+                  desc="Le interesa el programa pero requiere plan de pagos o crédito."
+                />
+                <SelectCard 
+                  selected={formData.puedeCubrirCostos === "no"}
+                  onClick={() => setFormData({ ...formData, puedeCubrirCostos: "no" })}
+                  icon={DollarSign}
+                  title="No tiene el capital"
+                  desc="Actualmente no cuenta con recursos para el programa."
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="profesion" className="text-xs font-bold text-foreground/80 uppercase tracking-wider">Profesión u Oficio *</Label>
+                <div className="relative">
+                  <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="profesion"
+                    placeholder="Ej: Electricista"
+                    value={formData.profesion}
+                    onChange={(e) => setFormData({ ...formData, profesion: e.target.value })}
+                    className="h-12 pl-11 bg-muted/20"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-foreground/80 uppercase tracking-wider">Escolaridad *</Label>
+                <Select value={formData.nivelEscolaridad} onValueChange={(value) => setFormData({ ...formData, nivelEscolaridad: value })}>
+                  <SelectTrigger className="h-12 bg-muted/20">
+                    <SelectValue placeholder="Nivel" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {nivelesEscolaridad.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-foreground/80 uppercase tracking-wider">Aplica para</Label>
+                <Select value={formData.nucleoFamiliar} onValueChange={(value) => setFormData({ ...formData, nucleoFamiliar: value })}>
+                  <SelectTrigger className="h-12 bg-muted/20">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-muted-foreground" />
+                      <SelectValue />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4, 5, 6].map((num) => (
+                      <SelectItem key={num} value={num.toString()}>
+                        {num === 1 ? "Solo el candidato" : `${num} personas`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="notas" className="text-xs font-bold text-foreground/80 uppercase tracking-wider">¿Algo importante que debamos saber?</Label>
+              <div className="relative">
+                <FileText className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
+                <Textarea
+                  id="notas"
+                  placeholder="Ej: Solo puede recibir llamadas en la tarde, tiene un primo en USA, etc..."
+                  value={formData.notas}
+                  onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
+                  className="pl-11 min-h-[90px] bg-muted/20 resize-none py-3"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Footer / Controls - Fixed at bottom */}
+      <div className="p-4 border-t bg-muted/10 flex gap-3 shrink-0">
+        {step === 1 ? (
+          <Button type="button" variant="outline" onClick={onCancel} className="h-12 flex-1 bg-white hover:bg-muted">
+            Cancelar
+          </Button>
+        ) : (
+          <Button type="button" variant="outline" onClick={handleBack} className="h-12 flex-1 bg-white hover:bg-muted">
+            <ChevronLeft className="w-5 h-5 mr-1" />
+            Atrás
+          </Button>
         )}
 
-        {/* Capacidad económica */}
-        <div className="space-y-2">
-          <Label>¿Puede cubrir el costo del servicio? *</Label>
-          <p className="text-xs text-muted-foreground -mt-1">
-            El costo total del servicio es de <span className="font-semibold text-foreground">$23,990 USD</span>.
-          </p>
-          <RadioGroup
-            value={formData.puedeCubrirCostos}
-            onValueChange={(v) => setFormData({ ...formData, puedeCubrirCostos: v })}
-            className="space-y-2 mt-2"
-            required
+        {step < 3 ? (
+          <Button 
+            type="button" 
+            onClick={handleNext} 
+            className="h-12 flex-[2] shadow-sm text-base"
+            disabled={(step === 1 && !validateStep1()) || (step === 2 && !validateStep2())}
           >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="si" id="costos-si" />
-              <Label htmlFor="costos-si" className="font-normal cursor-pointer">Sí, puede cubrir el costo</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="con-financiamiento" id="costos-financiamiento" />
-              <Label htmlFor="costos-financiamiento" className="font-normal cursor-pointer">Necesita financiamiento</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="no" id="costos-no" />
-              <Label htmlFor="costos-no" className="font-normal cursor-pointer">No puede cubrir el costo</Label>
-            </div>
-          </RadioGroup>
-        </div>
-
-        {/* Profesión y Escolaridad */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label htmlFor="profesion">Profesión *</Label>
-            <Input
-              id="profesion"
-              placeholder="Ej: Electricista"
-              value={formData.profesion}
-              onChange={(e) => setFormData({ ...formData, profesion: e.target.value })}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Nivel de Escolaridad *</Label>
-            <Select
-              value={formData.nivelEscolaridad}
-              onValueChange={(value) => setFormData({ ...formData, nivelEscolaridad: value })}
-              required
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar" />
-              </SelectTrigger>
-              <SelectContent>
-                {nivelesEscolaridad.map((nivel) => (
-                  <SelectItem key={nivel} value={nivel}>{nivel}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Núcleo familiar */}
-        <div className="space-y-2">
-          <Label>Núcleo Familiar (incluyendo al candidato)</Label>
-          <Select
-            value={formData.nucleoFamiliar}
-            onValueChange={(value) => setFormData({ ...formData, nucleoFamiliar: value })}
+            Siguiente paso
+            <ChevronRight className="w-5 h-5 ml-1" />
+          </Button>
+        ) : (
+          <Button 
+            type="submit" 
+            className="h-12 flex-[2] bg-primary hover:bg-primary/90 shadow-md font-bold text-base"
+            disabled={
+              isSaving || 
+              !formData.puedeCubrirCostos || 
+              !formData.profesion || 
+              !formData.nivelEscolaridad
+            }
           >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
-                <SelectItem key={num} value={num.toString()}>
-                  {num} {num === 1 ? "persona" : "personas"}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Notas */}
-      <div className="space-y-2">
-        <Label htmlFor="notas">Notas Adicionales</Label>
-        <Textarea
-          id="notas"
-          placeholder="Información relevante sobre el candidato..."
-          value={formData.notas}
-          onChange={(e) => setFormData({ ...formData, notas: e.target.value })}
-          rows={3}
-        />
-      </div>
-
-      {/* Actions */}
-      <div className="flex gap-3 pt-4">
-        <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
-          Cancelar
-        </Button>
-        <Button type="submit" className="flex-1" disabled={isSaving}>
-          {isSaving ? (
-            <span className="flex items-center gap-2">
-              <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-              Guardando...
-            </span>
-          ) : "Guardar Referido"}
-        </Button>
+            {isSaving ? (
+              <span className="flex items-center gap-2">
+                <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Registrando...
+              </span>
+            ) : "Registrar Candidato"}
+          </Button>
+        )}
       </div>
     </form>
   )
