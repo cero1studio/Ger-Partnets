@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import Image from "next/image"
+import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -10,32 +11,20 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
-  LayoutDashboard,
-  UserPlus,
   Kanban,
-  FileText,
   User,
-  ChevronLeft,
-  ChevronRight,
   LogOut,
-  Settings,
-  Bell,
-  Globe,
-  BarChart3,
+  Menu,
+  X,
 } from "lucide-react"
 
 const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Nuevo Lead", href: "/dashboard/nuevo-lead", icon: UserPlus },
-  { name: "Pipeline", href: "/dashboard/pipeline", icon: Kanban },
-  { name: "Analítica", href: "/dashboard/analitica", icon: BarChart3 },
-  { name: "Archivos", href: "/dashboard/archivos", icon: FileText },
-  { name: "Perfil", href: "/dashboard/perfil", icon: User },
+  { name: "Mis Referidos", href: "/dashboard", icon: Kanban },
+  { name: "Mi Perfil", href: "/dashboard/perfil", icon: User },
 ]
 
 export default function DashboardLayout({
@@ -43,32 +32,44 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const [collapsed, setCollapsed] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const pathname = usePathname()
+  const router = useRouter()
+
+  const handleLogout = () => {
+    router.push("/")
+  }
 
   return (
-    <div className="min-h-screen flex bg-background">
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          "fixed left-0 top-0 z-40 h-screen bg-sidebar transition-all duration-300 flex flex-col",
-          collapsed ? "w-[72px]" : "w-64"
-        )}
-      >
-        {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header */}
+      <header className="h-16 bg-primary border-b border-primary/20 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-50 shrink-0">
+        <div className="flex items-center gap-3">
+          {/* Mobile Menu Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden text-primary-foreground hover:bg-primary-foreground/10"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </Button>
+
           <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-sidebar-foreground rounded-lg flex items-center justify-center shrink-0">
-              <Globe className="w-5 h-5 text-sidebar" />
-            </div>
-            {!collapsed && (
-              <span className="text-lg font-bold text-sidebar-foreground">G.E.R.</span>
-            )}
+            <Image 
+              src="/logo.png" 
+              alt="G.E.R. Logo" 
+              width={36} 
+              height={36}
+              className="w-9 h-9"
+            />
+            <span className="text-lg font-bold text-primary-foreground hidden sm:inline">G.E.R. Partner Pipeline</span>
+            <span className="text-lg font-bold text-primary-foreground sm:hidden">G.E.R.</span>
           </Link>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+        {/* Desktop Navigation */}
+        <nav className="hidden lg:flex items-center gap-1">
           {navigation.map((item) => {
             const isActive = pathname === item.href
             return (
@@ -76,100 +77,85 @@ export default function DashboardLayout({
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors",
+                  "flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm font-medium",
                   isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+                    ? "bg-primary-foreground/20 text-primary-foreground"
+                    : "text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/10"
                 )}
               >
-                <item.icon className="w-5 h-5 shrink-0" />
-                {!collapsed && (
-                  <span className="text-sm font-medium">{item.name}</span>
-                )}
+                <item.icon className="w-4 h-4" />
+                {item.name}
               </Link>
             )
           })}
         </nav>
 
-        {/* Collapse Button */}
-        <div className="p-3 border-t border-sidebar-border">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setCollapsed(!collapsed)}
-            className="w-full justify-center text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
-          >
-            {collapsed ? (
-              <ChevronRight className="w-5 h-5" />
-            ) : (
-              <>
-                <ChevronLeft className="w-5 h-5 mr-2" />
-                <span className="text-sm">Colapsar</span>
-              </>
-            )}
-          </Button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <div
-        className={cn(
-          "flex-1 transition-all duration-300",
-          collapsed ? "ml-[72px]" : "ml-64"
-        )}
-      >
-        {/* Header */}
-        <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-30">
-          <div>
-            <h1 className="text-lg font-semibold text-foreground">
-              {navigation.find((n) => n.href === pathname)?.name || "Dashboard"}
-            </h1>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="w-5 h-5 text-muted-foreground" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />
-            </Button>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-2 h-auto py-1.5 px-2">
-                  <Avatar className="w-8 h-8">
-                    <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                      JP
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="text-left hidden sm:block">
-                    <p className="text-sm font-medium">Juan Pérez</p>
-                    <p className="text-xs text-muted-foreground">Aliado Premium</p>
-                  </div>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
+        <div className="flex items-center gap-3">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="flex items-center gap-2 h-auto py-1.5 px-2 hover:bg-primary-foreground/10">
+                <Avatar className="w-8 h-8">
+                  <AvatarFallback className="bg-primary-foreground text-primary text-sm">
+                    JP
+                  </AvatarFallback>
+                </Avatar>
+                <div className="text-left hidden sm:block">
+                  <p className="text-sm font-medium text-primary-foreground">Juan Pérez</p>
+                  <p className="text-xs text-primary-foreground/70">@juan.perez</p>
+                </div>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <div className="px-2 py-1.5 sm:hidden">
+                <p className="text-sm font-medium">Juan Pérez</p>
+                <p className="text-xs text-muted-foreground">@juan.perez</p>
+              </div>
+              <DropdownMenuSeparator className="sm:hidden" />
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard/perfil" className="cursor-pointer">
                   <User className="w-4 h-4 mr-2" />
-                  Perfil
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Settings className="w-4 h-4 mr-2" />
-                  Configuración
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive">
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Cerrar Sesión
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </header>
+                  Mi Perfil
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive cursor-pointer">
+                <LogOut className="w-4 h-4 mr-2" />
+                Cerrar Sesión
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </header>
 
-        {/* Page Content */}
-        <main className="p-6">{children}</main>
-      </div>
+      {/* Mobile Navigation Menu */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden bg-card border-b border-border px-4 py-3 space-y-1">
+          {navigation.map((item) => {
+            const isActive = pathname === item.href
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors",
+                  isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "text-foreground hover:bg-muted"
+                )}
+              >
+                <item.icon className="w-5 h-5" />
+                <span className="font-medium">{item.name}</span>
+              </Link>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Page Content - body scroll */}
+      <main className="flex-1 overflow-auto">
+        {children}
+      </main>
     </div>
   )
 }

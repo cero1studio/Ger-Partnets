@@ -1,175 +1,203 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Separator } from "@/components/ui/separator"
-import { Badge } from "@/components/ui/badge"
-import { Camera, Shield, Bell, Key } from "lucide-react"
+import { Eye, EyeOff, Check, Tag } from "lucide-react"
 
 export default function PerfilPage() {
-  const [isEditing, setIsEditing] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // Mock user data
+  const user = {
+    nombre: "Juan",
+    apellido: "Pérez",
+    email: "juan.perez@empresa.com",
+    etiqueta: "juan.perez",
+  }
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {}
+
+    if (!currentPassword) {
+      newErrors.currentPassword = "Ingresa tu contraseña actual"
+    }
+
+    if (!newPassword) {
+      newErrors.newPassword = "Ingresa tu nueva contraseña"
+    } else if (newPassword.length < 6) {
+      newErrors.newPassword = "La contraseña debe tener al menos 6 caracteres"
+    }
+
+    if (!confirmPassword) {
+      newErrors.confirmPassword = "Confirma tu nueva contraseña"
+    } else if (newPassword !== confirmPassword) {
+      newErrors.confirmPassword = "Las contraseñas no coinciden"
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!validateForm()) return
+
+    setIsLoading(true)
+    setSuccess(false)
+
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 1500))
+
+    setIsLoading(false)
+    setSuccess(true)
+    setCurrentPassword("")
+    setNewPassword("")
+    setConfirmPassword("")
+
+    // Clear success message after 3 seconds
+    setTimeout(() => setSuccess(false), 3000)
+  }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-foreground">Mi Perfil</h2>
-        <p className="text-muted-foreground mt-1">
-          Administra tu información personal y preferencias
-        </p>
-      </div>
+    <div className="p-4 sm:p-6 max-w-2xl mx-auto">
+      <h1 className="text-2xl font-bold text-foreground mb-6">Mi Perfil</h1>
 
-      {/* Profile Card */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <Avatar className="w-20 h-20">
-                  <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
-                    JP
-                  </AvatarFallback>
-                </Avatar>
-                <button className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground shadow-lg">
-                  <Camera className="w-4 h-4" />
-                </button>
+      {/* User Info Card */}
+      <Card className="mb-6">
+        <CardContent className="pt-6">
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <Avatar className="w-20 h-20">
+              <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
+                {user.nombre[0]}{user.apellido[0]}
+              </AvatarFallback>
+            </Avatar>
+            <div className="text-center sm:text-left">
+              <h2 className="text-xl font-semibold text-foreground">
+                {user.nombre} {user.apellido}
+              </h2>
+              <p className="text-muted-foreground text-sm">{user.email}</p>
+              <div className="flex items-center gap-2 mt-2 justify-center sm:justify-start">
+                <Tag className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium text-primary">@{user.etiqueta}</span>
               </div>
-              <div>
-                <h3 className="text-xl font-semibold">Juan Pérez</h3>
-                <p className="text-muted-foreground">juan.perez@empresa.com</p>
-                <Badge className="mt-2" variant="secondary">
-                  Aliado Premium
-                </Badge>
-              </div>
-            </div>
-            <Button
-              variant={isEditing ? "default" : "outline"}
-              onClick={() => setIsEditing(!isEditing)}
-            >
-              {isEditing ? "Guardar Cambios" : "Editar Perfil"}
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <Separator />
-          
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="nombre">Nombre</Label>
-              <Input
-                id="nombre"
-                defaultValue="Juan"
-                disabled={!isEditing}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="apellido">Apellido</Label>
-              <Input
-                id="apellido"
-                defaultValue="Pérez"
-                disabled={!isEditing}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Correo Electrónico</Label>
-              <Input
-                id="email"
-                type="email"
-                defaultValue="juan.perez@empresa.com"
-                disabled={!isEditing}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="telefono">Teléfono</Label>
-              <Input
-                id="telefono"
-                defaultValue="+1 234 567 8900"
-                disabled={!isEditing}
-              />
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="empresa">Empresa / Organización</Label>
-              <Input
-                id="empresa"
-                defaultValue="Agencia de Reclutamiento XYZ"
-                disabled={!isEditing}
-              />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Settings Cards */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Shield className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-base">Seguridad</CardTitle>
-                <CardDescription>Gestiona tu contraseña y 2FA</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" className="w-full">
-              <Key className="w-4 h-4 mr-2" />
-              Cambiar Contraseña
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Bell className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-base">Notificaciones</CardTitle>
-                <CardDescription>Configura tus alertas</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" className="w-full">
-              Configurar Notificaciones
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Stats */}
+      {/* Change Password Card */}
       <Card>
         <CardHeader>
-          <CardTitle>Estadísticas de Cuenta</CardTitle>
-          <CardDescription>Resumen de tu actividad en la plataforma</CardDescription>
+          <CardTitle>Cambiar Contraseña</CardTitle>
+          <CardDescription>
+            Actualiza tu contraseña para mantener tu cuenta segura.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 sm:grid-cols-4">
-            <div className="text-center p-4 bg-muted/30 rounded-lg">
-              <p className="text-2xl font-bold text-primary">248</p>
-              <p className="text-sm text-muted-foreground">Leads Totales</p>
+          {success && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-700">
+              <Check className="w-5 h-5" />
+              <span className="text-sm font-medium">Contraseña actualizada correctamente</span>
             </div>
-            <div className="text-center p-4 bg-muted/30 rounded-lg">
-              <p className="text-2xl font-bold text-green-600">32</p>
-              <p className="text-sm text-muted-foreground">Contratados</p>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="currentPassword">Contraseña Actual</Label>
+              <div className="relative">
+                <Input
+                  id="currentPassword"
+                  type={showCurrentPassword ? "text" : "password"}
+                  placeholder="********"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className={errors.currentPassword ? "border-destructive pr-10" : "pr-10"}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {errors.currentPassword && (
+                <p className="text-destructive text-sm">{errors.currentPassword}</p>
+              )}
             </div>
-            <div className="text-center p-4 bg-muted/30 rounded-lg">
-              <p className="text-2xl font-bold text-foreground">12.9%</p>
-              <p className="text-sm text-muted-foreground">Tasa Conversión</p>
+
+            <div className="space-y-2">
+              <Label htmlFor="newPassword">Nueva Contraseña</Label>
+              <div className="relative">
+                <Input
+                  id="newPassword"
+                  type={showNewPassword ? "text" : "password"}
+                  placeholder="********"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className={errors.newPassword ? "border-destructive pr-10" : "pr-10"}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {errors.newPassword && (
+                <p className="text-destructive text-sm">{errors.newPassword}</p>
+              )}
             </div>
-            <div className="text-center p-4 bg-muted/30 rounded-lg">
-              <p className="text-2xl font-bold text-foreground">8</p>
-              <p className="text-sm text-muted-foreground">Meses Activo</p>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirmar Nueva Contraseña</Label>
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="********"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className={errors.confirmPassword ? "border-destructive pr-10" : "pr-10"}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {errors.confirmPassword && (
+                <p className="text-destructive text-sm">{errors.confirmPassword}</p>
+              )}
             </div>
-          </div>
+
+            <Button type="submit" className="w-full sm:w-auto" disabled={isLoading}>
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                  Guardando...
+                </span>
+              ) : (
+                "Guardar Contraseña"
+              )}
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>

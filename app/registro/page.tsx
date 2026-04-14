@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
@@ -8,18 +8,43 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckCircle, Globe, Users, BarChart3, Eye, EyeOff } from "lucide-react"
+import { CheckCircle, Globe, Users, BarChart3, Eye, EyeOff, Tag } from "lucide-react"
 
-export default function LoginPage() {
+export default function RegistroPage() {
   const router = useRouter()
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // Generate username tag from first name and last name
+  const generatedTag = useMemo(() => {
+    if (firstName && lastName) {
+      const cleanFirst = firstName.toLowerCase().trim().replace(/\s+/g, '')
+      const cleanLast = lastName.toLowerCase().trim().replace(/\s+/g, '')
+      return `${cleanFirst}.${cleanLast}`
+    }
+    if (email && email.includes('@')) {
+      return email.split('@')[0].toLowerCase()
+    }
+    return ''
+  }, [firstName, lastName, email])
 
   const validateForm = () => {
-    const newErrors: { email?: string; password?: string } = {}
+    const newErrors: Record<string, string> = {}
+    
+    if (!firstName.trim()) {
+      newErrors.firstName = "El nombre es requerido"
+    }
+    
+    if (!lastName.trim()) {
+      newErrors.lastName = "El apellido es requerido"
+    }
     
     if (!email) {
       newErrors.email = "El correo electrónico es requerido"
@@ -33,6 +58,12 @@ export default function LoginPage() {
       newErrors.password = "La contraseña debe tener al menos 6 caracteres"
     }
     
+    if (!confirmPassword) {
+      newErrors.confirmPassword = "Confirma tu contraseña"
+    } else if (password !== confirmPassword) {
+      newErrors.confirmPassword = "Las contraseñas no coinciden"
+    }
+    
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -43,7 +74,8 @@ export default function LoginPage() {
     if (!validateForm()) return
     
     setIsLoading(true)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    // Simulate registration - here you would create the HubSpot tag with generatedTag
+    await new Promise((resolve) => setTimeout(resolve, 1500))
     router.push("/dashboard")
   }
 
@@ -83,10 +115,10 @@ export default function LoginPage() {
         <div className="space-y-8">
           <div>
             <h1 className="text-3xl xl:text-4xl font-bold text-primary-foreground leading-tight text-balance">
-              Portal de Aliados Estratégicos
+              Únete como Aliado Estratégico
             </h1>
             <p className="text-primary-foreground/80 mt-4 text-lg">
-              Gestiona tus referidos y accede a herramientas exclusivas para el programa de reclutamiento internacional.
+              Crea tu cuenta y comienza a referir candidatos al programa de reclutamiento internacional.
             </p>
           </div>
           
@@ -110,7 +142,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Right Panel - Login Form */}
+      {/* Right Panel - Registration Form */}
       <div className="flex-1 flex items-center justify-center p-6 sm:p-8 bg-background min-h-screen lg:min-h-0">
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
@@ -126,14 +158,56 @@ export default function LoginPage() {
           </div>
 
           <Card className="border-0 shadow-xl">
-            <CardHeader className="space-y-1 pb-6">
-              <CardTitle className="text-2xl font-bold text-center">Iniciar Sesión</CardTitle>
+            <CardHeader className="space-y-1 pb-4">
+              <CardTitle className="text-2xl font-bold text-center">Crear Cuenta</CardTitle>
               <CardDescription className="text-center">
-                Ingresa tus credenciales para acceder al portal
+                Completa tus datos para registrarte como aliado
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">Nombre</Label>
+                    <Input
+                      id="firstName"
+                      type="text"
+                      placeholder="Juan"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      className={errors.firstName ? "border-destructive" : ""}
+                    />
+                    {errors.firstName && (
+                      <p className="text-destructive text-xs">{errors.firstName}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Apellido</Label>
+                    <Input
+                      id="lastName"
+                      type="text"
+                      placeholder="Pérez"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      className={errors.lastName ? "border-destructive" : ""}
+                    />
+                    {errors.lastName && (
+                      <p className="text-destructive text-xs">{errors.lastName}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Generated Tag Preview */}
+                {generatedTag && (
+                  <div className="bg-muted/50 rounded-lg p-3 flex items-center gap-3">
+                    <Tag className="w-4 h-4 text-primary shrink-0" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Tu etiqueta en HubSpot será:</p>
+                      <p className="text-sm font-medium text-foreground">@{generatedTag}</p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <Label htmlFor="email">Correo Electrónico</Label>
                   <Input
@@ -145,7 +219,7 @@ export default function LoginPage() {
                     className={errors.email ? "border-destructive" : ""}
                   />
                   {errors.email && (
-                    <p className="text-destructive text-sm">{errors.email}</p>
+                    <p className="text-destructive text-xs">{errors.email}</p>
                   )}
                 </div>
                 
@@ -165,25 +239,36 @@ export default function LoginPage() {
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      {showPassword ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                   {errors.password && (
-                    <p className="text-destructive text-sm">{errors.password}</p>
+                    <p className="text-destructive text-xs">{errors.password}</p>
                   )}
                 </div>
 
-                <div className="flex items-center justify-end">
-                  <button
-                    type="button"
-                    className="text-sm text-primary hover:underline"
-                  >
-                    ¿Olvidaste tu contraseña?
-                  </button>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="********"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className={errors.confirmPassword ? "border-destructive pr-10" : "pr-10"}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {errors.confirmPassword && (
+                    <p className="text-destructive text-xs">{errors.confirmPassword}</p>
+                  )}
                 </div>
 
                 <Button
@@ -194,19 +279,19 @@ export default function LoginPage() {
                   {isLoading ? (
                     <span className="flex items-center gap-2">
                       <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                      Ingresando...
+                      Creando cuenta...
                     </span>
                   ) : (
-                    "Ingresar al Portal"
+                    "Crear Cuenta"
                   )}
                 </Button>
               </form>
 
               <div className="mt-6 pt-6 border-t text-center">
                 <p className="text-sm text-muted-foreground">
-                  ¿No tienes cuenta?{" "}
-                  <Link href="/registro" className="text-primary hover:underline font-medium">
-                    Regístrate aquí
+                  ¿Ya tienes cuenta?{" "}
+                  <Link href="/" className="text-primary hover:underline font-medium">
+                    Inicia sesión
                   </Link>
                 </p>
               </div>
@@ -214,7 +299,7 @@ export default function LoginPage() {
           </Card>
 
           <p className="text-center text-xs text-muted-foreground mt-6">
-            Al iniciar sesión, aceptas nuestros términos de servicio y política de privacidad.
+            Al registrarte, aceptas nuestros términos de servicio y política de privacidad.
           </p>
         </div>
       </div>
