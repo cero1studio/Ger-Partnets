@@ -202,20 +202,43 @@ export async function createDeal(params: {
 }
 
 // ─── Crear tag del aliado en HubSpot ─────────────────────
+// Trae las opciones existentes, añade la nueva y hace PATCH
+// con la lista completa para no borrar los tags previos.
 
-export async function createAliадоTag(etiqueta: string): Promise<string | null> {
+export async function createAliaoTag(etiqueta: string): Promise<string | null> {
   try {
-    const data = await hsPatch("/crm/v3/properties/deals/hs_tag_ids", {
-      options: [{
+    // 1. Traer opciones actuales
+    const current = await hsGet("/crm/v3/properties/deals/hs_tag_ids")
+    const existing: Array<{ label: string; value: string; displayOrder: number; hidden: boolean }> =
+      current.options ?? []
+
+    // Si ya existe, no duplicar
+    const already = existing.find(o => o.value === etiqueta)
+    if (already) return already.value
+
+    // 2. Añadir la nueva opción al final
+    const maxOrder = existing.reduce((max, o) => Math.max(max, o.displayOrder ?? 0), -1)
+    const newOptions = [
+      ...existing.map(o => ({
+        label:        o.label,
+        value:        o.value,
+        displayOrder: o.displayOrder,
+        hidden:       o.hidden ?? false,
+      })),
+      {
         label:        etiqueta,
         value:        etiqueta,
-        displayOrder: 0,
+        displayOrder: maxOrder + 1,
         hidden:       false,
-      }],
-    })
-    const opt = (data.options ?? []).find((o: { value: string }) => o.value === etiqueta)
+      },
+    ]
+
+    // 3. PATCH con la lista completa
+    const updated = await hsPatch("/crm/v3/properties/deals/hs_tag_ids", { options: newOptions })
+    const opt = (updated.options ?? []).find((o: { value: string }) => o.value === etiqueta)
     return opt?.value ?? etiqueta
-  } catch {
+  } catch (err) {
+    console.error("[createAliaoTag]", err)
     return null
   }
 }
