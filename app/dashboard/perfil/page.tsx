@@ -1,12 +1,18 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Eye, EyeOff, Check, Tag } from "lucide-react"
+
+// Demo users info
+const demoUsers: Record<string, { nombre: string; apellido: string; email: string; etiqueta: string }> = {
+  "demo@ger.com": { nombre: "Carlos", apellido: "Mendoza", email: "demo@ger.com", etiqueta: "carlos.mendoza" },
+  "nuevo@ger.com": { nombre: "Patricia", apellido: "López", email: "nuevo@ger.com", etiqueta: "patricia.lopez" },
+}
 
 export default function PerfilPage() {
   const [currentPassword, setCurrentPassword] = useState("")
@@ -18,14 +24,13 @@ export default function PerfilPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [user, setUser] = useState({ nombre: "Usuario", apellido: "", email: "", etiqueta: "usuario" })
 
-  // Mock user data
-  const user = {
-    nombre: "Juan",
-    apellido: "Pérez",
-    email: "juan.perez@empresa.com",
-    etiqueta: "juan.perez",
-  }
+  useEffect(() => {
+    const storedUser = localStorage.getItem("ger_demo_user") || "demo@ger.com"
+    const userData = demoUsers[storedUser] || demoUsers["demo@ger.com"]
+    setUser(userData)
+  }, [])
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}

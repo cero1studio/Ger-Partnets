@@ -56,7 +56,7 @@ const etapas = [
   { id: "registro", nombre: "Registro", color: "bg-blue-500" },
   { id: "screening", nombre: "Screening Inicial", color: "bg-yellow-500" },
   { id: "entrevistas", nombre: "Entrevistas", color: "bg-orange-500" },
-  { id: "programa", nombre: "Programa EB-3", color: "bg-purple-500" },
+  { id: "programa", nombre: "Seguimiento de Proceso", color: "bg-purple-500" },
   { id: "contratado", nombre: "Contratado", color: "bg-green-500" },
 ]
 
@@ -90,8 +90,133 @@ const programas = [
   "Otro",
 ]
 
+// Demo users data
+const demoUsers = {
+  "demo@ger.com": {
+    nombre: "Carlos",
+    apellido: "Mendoza",
+    etiqueta: "carlos.mendoza",
+    leads: [
+      {
+        id: "1",
+        nombre: "María González",
+        email: "maria.gonzalez@email.com",
+        telefono: "+58 424 123 4567",
+        nacionalidad: "Venezuela",
+        programa: "EB-3 Unskilled Worker",
+        etapa: "registro",
+        fechaRegistro: "10/04/2026",
+        tieneEB3: true,
+        nucleoFamiliar: 4,
+        dedicacion: "full-time",
+        notas: "Interesada en trabajos de procesamiento de alimentos",
+      },
+      {
+        id: "2",
+        nombre: "Roberto Herrera",
+        email: "roberto.h@gmail.com",
+        telefono: "+57 311 987 6543",
+        nacionalidad: "Colombia",
+        programa: "EB-3 Skilled Worker",
+        etapa: "screening",
+        fechaRegistro: "08/04/2026",
+        tieneEB3: true,
+        nucleoFamiliar: 2,
+        dedicacion: "full-time",
+        notas: "Ingeniero industrial con 5 años de experiencia",
+      },
+      {
+        id: "3",
+        nombre: "Ana Martínez",
+        email: "ana.martinez@outlook.com",
+        telefono: "+52 55 8765 4321",
+        nacionalidad: "México",
+        programa: "EB-3 Unskilled Worker",
+        etapa: "entrevistas",
+        fechaRegistro: "01/04/2026",
+        tieneEB3: true,
+        nucleoFamiliar: 3,
+        dedicacion: "full-time",
+        notas: "Disponibilidad inmediata",
+      },
+      {
+        id: "4",
+        nombre: "Luis Fernández",
+        email: "luis.f@email.com",
+        telefono: "+51 999 111 2222",
+        nacionalidad: "Perú",
+        programa: "EB-3 Skilled Worker",
+        etapa: "programa",
+        fechaRegistro: "15/03/2026",
+        tieneEB3: true,
+        nucleoFamiliar: 5,
+        dedicacion: "full-time",
+        notas: "Técnico en soldadura certificado",
+      },
+      {
+        id: "5",
+        nombre: "Carmen Rojas",
+        email: "carmen.rojas@gmail.com",
+        telefono: "+593 98 765 4321",
+        nacionalidad: "Ecuador",
+        programa: "EB-3 Unskilled Worker",
+        etapa: "contratado",
+        fechaRegistro: "01/03/2026",
+        tieneEB3: true,
+        nucleoFamiliar: 2,
+        dedicacion: "full-time",
+        notas: "Proceso completado exitosamente",
+      },
+      {
+        id: "6",
+        nombre: "Pedro Sánchez",
+        email: "pedro.s@hotmail.com",
+        telefono: "+58 412 333 4444",
+        nacionalidad: "Venezuela",
+        programa: "H-2B Visa",
+        etapa: "registro",
+        fechaRegistro: "12/04/2026",
+        tieneEB3: false,
+        nucleoFamiliar: 1,
+        dedicacion: "part-time",
+        notas: "",
+      },
+      {
+        id: "7",
+        nombre: "Isabella Torres",
+        email: "isabella.t@email.com",
+        telefono: "+57 320 555 6666",
+        nacionalidad: "Colombia",
+        programa: "EB-3 Unskilled Worker",
+        etapa: "screening",
+        fechaRegistro: "05/04/2026",
+        tieneEB3: true,
+        nucleoFamiliar: 3,
+        dedicacion: "full-time",
+        notas: "Referencias laborales verificadas",
+      },
+    ] as Lead[],
+  },
+  "nuevo@ger.com": {
+    nombre: "Patricia",
+    apellido: "López",
+    etiqueta: "patricia.lopez",
+    leads: [] as Lead[],
+  },
+}
+
+// Get user from localStorage or default to demo user
+const getStoredUser = (): string => {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("ger_demo_user") || "demo@ger.com"
+  }
+  return "demo@ger.com"
+}
+
 export default function DashboardPage() {
-  const [leads, setLeads] = useState<Lead[]>([])
+  const [currentUser, setCurrentUser] = useState(getStoredUser())
+  const userData = demoUsers[currentUser as keyof typeof demoUsers] || demoUsers["demo@ger.com"]
+  const [leads, setLeads] = useState<Lead[]>(userData.leads)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [cvFile, setCvFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)

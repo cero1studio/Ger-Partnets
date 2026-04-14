@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
@@ -27,18 +27,34 @@ const navigation = [
   { name: "Mi Perfil", href: "/dashboard/perfil", icon: User },
 ]
 
+// Demo users info
+const demoUsers: Record<string, { nombre: string; apellido: string; etiqueta: string }> = {
+  "demo@ger.com": { nombre: "Carlos", apellido: "Mendoza", etiqueta: "carlos.mendoza" },
+  "nuevo@ger.com": { nombre: "Patricia", apellido: "López", etiqueta: "patricia.lopez" },
+}
+
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [user, setUser] = useState({ nombre: "Usuario", apellido: "", etiqueta: "usuario" })
   const pathname = usePathname()
   const router = useRouter()
 
+  useEffect(() => {
+    const storedUser = localStorage.getItem("ger_demo_user") || "demo@ger.com"
+    const userData = demoUsers[storedUser] || demoUsers["demo@ger.com"]
+    setUser(userData)
+  }, [])
+
   const handleLogout = () => {
+    localStorage.removeItem("ger_demo_user")
     router.push("/")
   }
+  
+  const initials = `${user.nombre.charAt(0)}${user.apellido.charAt(0)}`
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -61,7 +77,7 @@ export default function DashboardLayout({
               alt="G.E.R. Logo" 
               width={36} 
               height={36}
-              className="w-9 h-9"
+              className="h-9 w-auto shrink-0"
             />
             <span className="text-lg font-bold text-primary-foreground hidden sm:inline">G.E.R. Partner Pipeline</span>
             <span className="text-lg font-bold text-primary-foreground sm:hidden">G.E.R.</span>
@@ -96,19 +112,19 @@ export default function DashboardLayout({
               <Button variant="ghost" className="flex items-center gap-2 h-auto py-1.5 px-2 hover:bg-primary-foreground/10">
                 <Avatar className="w-8 h-8">
                   <AvatarFallback className="bg-primary-foreground text-primary text-sm">
-                    JP
+                    {initials}
                   </AvatarFallback>
                 </Avatar>
                 <div className="text-left hidden sm:block">
-                  <p className="text-sm font-medium text-primary-foreground">Juan Pérez</p>
-                  <p className="text-xs text-primary-foreground/70">@juan.perez</p>
+                  <p className="text-sm font-medium text-primary-foreground">{user.nombre} {user.apellido}</p>
+                  <p className="text-xs text-primary-foreground/70">@{user.etiqueta}</p>
                 </div>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <div className="px-2 py-1.5 sm:hidden">
-                <p className="text-sm font-medium">Juan Pérez</p>
-                <p className="text-xs text-muted-foreground">@juan.perez</p>
+                <p className="text-sm font-medium">{user.nombre} {user.apellido}</p>
+                <p className="text-xs text-muted-foreground">@{user.etiqueta}</p>
               </div>
               <DropdownMenuSeparator className="sm:hidden" />
               <DropdownMenuItem asChild>
