@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckCircle, Globe, Users, BarChart3, Eye, EyeOff, Tag } from "lucide-react"
+import { CheckCircle, Globe, Users, BarChart3, Eye, EyeOff, Tag, PartyPopper } from "lucide-react"
 
 export default function RegistroPage() {
   const router = useRouter()
@@ -21,6 +21,7 @@ export default function RegistroPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [createdUser, setCreatedUser] = useState<{ nombre: string; etiqueta: string } | null>(null)
 
   // Generate username tag from first name and last name
   const generatedTag = useMemo(() => {
@@ -84,7 +85,8 @@ export default function RegistroPage() {
         setErrors({ email: data.error ?? "Error al registrarse" })
         return
       }
-      router.push("/dashboard")
+      // Mostrar pantalla de bienvenida con el username antes de entrar
+      setCreatedUser({ nombre: data.user.nombre, etiqueta: data.user.etiqueta })
     } catch {
       setErrors({ email: "Error de conexión. Intenta de nuevo." })
     } finally {
@@ -106,6 +108,36 @@ export default function RegistroPage() {
       text: "Seguimiento EB-3: Control total sobre los aplicantes al programa.",
     },
   ]
+
+  // ── Pantalla de bienvenida post-registro ────────────────
+  if (createdUser) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-background">
+        <div className="w-full max-w-md text-center space-y-6">
+          <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+            <PartyPopper className="w-10 h-10 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">¡Bienvenido, {createdUser.nombre}!</h1>
+            <p className="text-muted-foreground mt-2">Tu cuenta fue creada exitosamente.</p>
+          </div>
+          <div className="bg-primary/5 border border-primary/20 rounded-xl p-5">
+            <p className="text-sm text-muted-foreground mb-1">Tu nombre de usuario es</p>
+            <div className="flex items-center justify-center gap-2">
+              <Tag className="w-5 h-5 text-primary" />
+              <span className="text-xl font-bold text-primary">@{createdUser.etiqueta}</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Con este nombre se identificarán todos los referidos que registres en la plataforma.
+            </p>
+          </div>
+          <Button className="w-full h-11" onClick={() => router.push("/dashboard")}>
+            Ir al Dashboard
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
@@ -205,13 +237,13 @@ export default function RegistroPage() {
                   </div>
                 </div>
 
-                {/* Generated Tag Preview */}
+                {/* Tag preview */}
                 {generatedTag && (
-                  <div className="bg-muted/50 rounded-lg p-3 flex items-center gap-3">
+                  <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 flex items-center gap-3">
                     <Tag className="w-4 h-4 text-primary shrink-0" />
                     <div>
-                      <p className="text-xs text-muted-foreground">Tu etiqueta en HubSpot será:</p>
-                      <p className="text-sm font-medium text-foreground">@{generatedTag}</p>
+                      <p className="text-xs text-muted-foreground">Tu nombre de usuario será:</p>
+                      <p className="text-sm font-semibold text-primary">@{generatedTag}</p>
                     </div>
                   </div>
                 )}

@@ -30,7 +30,11 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { nombre, apellido, email, telefono, ciudad, programa, notas } = body
+    const {
+      nombre, apellido, email, telefono, ciudad, programa,
+      tuvoVisa, tipoVisa, puedeCubrirCostos, profesion, nivelEscolaridad,
+      nucleoFamiliar, notas,
+    } = body
 
     if (!nombre || !apellido || !email || !telefono) {
       return NextResponse.json({ error: "Nombre, apellido, email y teléfono son requeridos" }, { status: 400 })
@@ -42,7 +46,23 @@ export async function POST(req: NextRequest) {
 
     const tagId = user.hubspotTagId ?? user.etiqueta
 
-    const result = await createDeal({ nombre, apellido, email, telefono, ciudad, programa, tagId, notas })
+    // Codificar campos de perfilamiento en la descripción del deal
+    const perfilLines = [
+      programa       ? `Programa: ${programa}` : null,
+      profesion      ? `Profesión: ${profesion}` : null,
+      nivelEscolaridad ? `Escolaridad: ${nivelEscolaridad}` : null,
+      nucleoFamiliar ? `Núcleo familiar: ${nucleoFamiliar} personas` : null,
+      tuvoVisa !== undefined ? `Tuvo visa: ${tuvoVisa ? `Sí — ${tipoVisa ?? ""}`.trim() : "No"}` : null,
+      puedeCubrirCostos ? `Cubre costos ($23,990): ${
+        puedeCubrirCostos === "si" ? "Sí" :
+        puedeCubrirCostos === "con-financiamiento" ? "Con financiamiento" : "No"
+      }` : null,
+      notas ? `Notas: ${notas}` : null,
+    ].filter(Boolean)
+
+    const description = perfilLines.join("\n")
+
+    const result = await createDeal({ nombre, apellido, email, telefono, ciudad, programa, tagId, notas: description })
     return NextResponse.json({ ok: true, ...result }, { status: 201 })
   } catch (err) {
     console.error("[POST /api/leads]", err)

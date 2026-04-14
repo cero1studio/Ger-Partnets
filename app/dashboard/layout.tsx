@@ -120,12 +120,12 @@ export default function DashboardLayout({
                 </div>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <div className="px-2 py-1.5 sm:hidden">
-                <p className="text-sm font-medium">{user.nombre} {user.apellido}</p>
-                <p className="text-xs text-muted-foreground">@{user.etiqueta}</p>
+            <DropdownMenuContent align="end" className="w-60">
+              <div className="px-2 py-2">
+                <p className="text-sm font-semibold">{user.nombre} {user.apellido}</p>
+                <p className="text-xs text-primary font-medium">@{user.etiqueta}</p>
               </div>
-              <DropdownMenuSeparator className="sm:hidden" />
+              <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link href="/dashboard/perfil" className="cursor-pointer">
                   <User className="w-4 h-4 mr-2" />

@@ -38,26 +38,7 @@ import {
   Mail,
   MapPin,
   Calendar,
-  MessageSquare,
-  Video,
-  User,
-  Clock,
 } from "lucide-react"
-
-type Comment = {
-  id: string
-  autor: string
-  texto: string
-  fecha: string
-}
-
-type Meeting = {
-  id: string
-  titulo: string
-  fecha: string
-  tipo: "llamada" | "video" | "presencial"
-  notas?: string
-}
 
 type Lead = {
   id: string
@@ -65,22 +46,10 @@ type Lead = {
   email: string
   telefono: string
   ciudad: string
-  nacionalidad?: string
-  programa?: string
   etapa: string
   stageLabel?: string
   fechaRegistro: string
-  tuvoVisa?: boolean
-  tipoVisa?: string
-  puedeCubrirCostos?: string
-  aceptaInversion?: boolean
-  profesion?: string
-  nivelEscolaridad?: string
-  nucleoFamiliar?: number
   notas?: string
-  responsable?: string
-  comentarios?: Comment[]
-  reuniones?: Meeting[]
 }
 
 // Etapas de HubSpot — IDs reales del pipeline "Funnel de ventas" (id: default)
@@ -156,13 +125,19 @@ export default function DashboardPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          nombre:    formData.nombre,
-          apellido:  formData.apellido,
-          email:     formData.email,
-          telefono:  formData.telefono,
-          ciudad:    formData.ciudad,
-          programa:  formData.programa,
-          notas:     formData.notas,
+          nombre:             formData.nombre,
+          apellido:           formData.apellido,
+          email:              formData.email,
+          telefono:           formData.telefono,
+          ciudad:             formData.ciudad,
+          programa:           formData.programa,
+          tuvoVisa:           formData.tuvoVisa,
+          tipoVisa:           formData.tipoVisa,
+          puedeCubrirCostos:  formData.puedeCubrirCostos,
+          profesion:          formData.profesion,
+          nivelEscolaridad:   formData.nivelEscolaridad,
+          nucleoFamiliar:     parseInt(formData.nucleoFamiliar),
+          notas:              formData.notas,
         }),
       })
       if (res.ok) {
@@ -338,60 +313,35 @@ export default function DashboardPage() {
 }
 
 function LeadCard({ lead, onClick }: { lead: Lead; onClick: () => void }) {
-  const commentCount = lead.comentarios?.length || 0
-  const meetingCount = lead.reuniones?.length || 0
-  
   return (
-    <Card 
+    <Card
       className="bg-card hover:shadow-md transition-shadow cursor-pointer"
       onClick={onClick}
     >
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between mb-2">
-          <h3 className="font-medium text-foreground text-sm">{lead.nombre}</h3>
-          {lead.tieneEB3 && (
-            <Badge className="bg-secondary text-secondary-foreground text-xs shrink-0">EB-3</Badge>
+      <CardContent className="p-4 space-y-2">
+        <h3 className="font-medium text-foreground text-sm leading-tight">{lead.nombre}</h3>
+        <div className="space-y-1 text-xs text-muted-foreground">
+          {lead.email && (
+            <div className="flex items-center gap-2">
+              <Mail className="w-3 h-3 shrink-0" />
+              <span className="truncate">{lead.email}</span>
+            </div>
           )}
-        </div>
-        
-        <div className="space-y-1.5 text-xs text-muted-foreground mb-3">
-          <div className="flex items-center gap-2">
-            <MapPin className="w-3 h-3 shrink-0" />
-            <span>{lead.nacionalidad}</span>
-          </div>
+          {lead.telefono && (
+            <div className="flex items-center gap-2">
+              <Phone className="w-3 h-3 shrink-0" />
+              <span>{lead.telefono}</span>
+            </div>
+          )}
+          {lead.ciudad && (
+            <div className="flex items-center gap-2">
+              <MapPin className="w-3 h-3 shrink-0" />
+              <span>{lead.ciudad}</span>
+            </div>
+          )}
           <div className="flex items-center gap-2">
             <Calendar className="w-3 h-3 shrink-0" />
             <span>{lead.fechaRegistro}</span>
-          </div>
-        </div>
-
-        {/* Responsable */}
-        <div className="flex items-center gap-2 mb-3 p-2 bg-muted/50 rounded-md">
-          <Avatar className="w-5 h-5">
-            <AvatarFallback className="text-[10px] bg-primary text-primary-foreground">
-              {lead.responsable.split(" ").map(n => n[0]).join("")}
-            </AvatarFallback>
-          </Avatar>
-          <span className="text-xs text-muted-foreground">{lead.responsable}</span>
-        </div>
-
-        <div className="pt-2 border-t flex items-center justify-between">
-          <Badge variant="outline" className="text-xs">
-            {lead.programa}
-          </Badge>
-          <div className="flex items-center gap-2 text-muted-foreground">
-            {commentCount > 0 && (
-              <div className="flex items-center gap-1 text-xs">
-                <MessageSquare className="w-3 h-3" />
-                {commentCount}
-              </div>
-            )}
-            {meetingCount > 0 && (
-              <div className="flex items-center gap-1 text-xs">
-                <Video className="w-3 h-3" />
-                {meetingCount}
-              </div>
-            )}
           </div>
         </div>
       </CardContent>
@@ -399,167 +349,66 @@ function LeadCard({ lead, onClick }: { lead: Lead; onClick: () => void }) {
   )
 }
 
-function LeadDetail({ lead, onClose }: { lead: Lead; onClose: () => void }) {
+function LeadDetail({ lead }: { lead: Lead; onClose: () => void }) {
   const etapa = etapas.find(e => e.id === lead.etapa)
-  
+
   return (
     <div className="space-y-6">
       <SheetHeader>
         <SheetTitle className="flex items-center gap-3">
           <Avatar className="w-10 h-10">
-            <AvatarFallback className="bg-primary text-primary-foreground">
+            <AvatarFallback className="bg-primary text-primary-foreground font-bold">
               {lead.nombre.split(" ").map(n => n[0]).join("").slice(0, 2)}
             </AvatarFallback>
           </Avatar>
           <div>
             <p className="text-lg font-semibold">{lead.nombre}</p>
             <Badge className={`${etapa?.color} text-white text-xs mt-1`}>
-              {etapa?.nombre}
+              {etapa?.nombre ?? lead.etapa}
             </Badge>
           </div>
         </SheetTitle>
-        <SheetDescription>Hoja de vida del candidato</SheetDescription>
+        <SheetDescription>Detalle del candidato referido</SheetDescription>
       </SheetHeader>
 
-      {/* Información de Contacto */}
-      <div className="space-y-3">
+      {/* Contacto */}
+      <div className="space-y-2">
         <h3 className="text-sm font-semibold text-foreground border-b pb-2">Contacto</h3>
         <div className="grid gap-2 text-sm">
-          <div className="flex items-center gap-3">
-            <Mail className="w-4 h-4 text-muted-foreground" />
-            <a href={`mailto:${lead.email}`} className="text-primary hover:underline">{lead.email}</a>
-          </div>
-          <div className="flex items-center gap-3">
-            <Phone className="w-4 h-4 text-muted-foreground" />
-            <a href={`tel:${lead.telefono}`} className="text-primary hover:underline">{lead.telefono}</a>
-          </div>
-          <div className="flex items-center gap-3">
-            <MapPin className="w-4 h-4 text-muted-foreground" />
-            <span>{lead.nacionalidad}</span>
-          </div>
+          {lead.email && (
+            <div className="flex items-center gap-3">
+              <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
+              <a href={`mailto:${lead.email}`} className="text-primary hover:underline truncate">{lead.email}</a>
+            </div>
+          )}
+          {lead.telefono && (
+            <div className="flex items-center gap-3">
+              <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
+              <a href={`tel:${lead.telefono}`} className="text-primary hover:underline">{lead.telefono}</a>
+            </div>
+          )}
+          {lead.ciudad && (
+            <div className="flex items-center gap-3">
+              <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
+              <span>{lead.ciudad}</span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Información del Programa */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-foreground border-b pb-2">Programa</h3>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div>
-            <p className="text-muted-foreground text-xs">Programa</p>
-            <p className="font-medium">{lead.programa}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground text-xs">Núcleo Familiar</p>
-            <p className="font-medium">{lead.nucleoFamiliar} personas</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground text-xs">Tuvo visa</p>
-            <p className="font-medium">
-              {lead.tuvoVisa ? `Sí${lead.tipoVisa ? ` — ${lead.tipoVisa}` : ""}` : "No"}
-            </p>
-          </div>
-          <div>
-            <p className="text-muted-foreground text-xs">Cubre costos ($23,990)</p>
-            <p className="font-medium">
-              {lead.puedeCubrirCostos === "si"
-                ? "Sí"
-                : lead.puedeCubrirCostos === "con-financiamiento"
-                ? "Con financiamiento"
-                : "No"}
-            </p>
-          </div>
-          <div>
-            <p className="text-muted-foreground text-xs">Profesión</p>
-            <p className="font-medium">{lead.profesion || "—"}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground text-xs">Escolaridad</p>
-            <p className="font-medium">{lead.nivelEscolaridad || "—"}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Responsable */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-foreground border-b pb-2">Responsable</h3>
-        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-          <Avatar className="w-8 h-8">
-            <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-              {lead.responsable.split(" ").map(n => n[0]).join("")}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <p className="font-medium text-sm">{lead.responsable}</p>
-            <p className="text-xs text-muted-foreground">Asesor asignado en HubSpot</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Notas */}
+      {/* Notas / Perfilamiento (guardado en description de HubSpot) */}
       {lead.notas && (
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-foreground border-b pb-2">Notas</h3>
-          <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">{lead.notas}</p>
-        </div>
-      )}
-
-      {/* Reuniones */}
-      {lead.reuniones && lead.reuniones.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-foreground border-b pb-2 flex items-center gap-2">
-            <Video className="w-4 h-4" />
-            Reuniones ({lead.reuniones.length})
-          </h3>
-          <div className="space-y-2">
-            {lead.reuniones.map((reunion) => (
-              <div key={reunion.id} className="p-3 bg-muted/50 rounded-lg text-sm">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="font-medium">{reunion.titulo}</p>
-                  <Badge variant="outline" className="text-xs capitalize">
-                    {reunion.tipo === "llamada" ? "Llamada" : reunion.tipo === "video" ? "Video" : "Presencial"}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Clock className="w-3 h-3" />
-                  {reunion.fecha}
-                </div>
-                {reunion.notas && (
-                  <p className="text-xs text-muted-foreground mt-2">{reunion.notas}</p>
-                )}
-              </div>
-            ))}
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-foreground border-b pb-2">Perfilamiento</h3>
+          <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground whitespace-pre-line">
+            {lead.notas}
           </div>
         </div>
       )}
 
-      {/* Comentarios */}
-      {lead.comentarios && lead.comentarios.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-foreground border-b pb-2 flex items-center gap-2">
-            <MessageSquare className="w-4 h-4" />
-            Comentarios ({lead.comentarios.length})
-          </h3>
-          <div className="space-y-3">
-            {lead.comentarios.map((comment) => (
-              <div key={comment.id} className="text-sm">
-                <div className="flex items-center gap-2 mb-1">
-                  <Avatar className="w-5 h-5">
-                    <AvatarFallback className="text-[10px] bg-muted-foreground text-muted">
-                      {comment.autor.split(" ").map(n => n[0]).join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="font-medium text-xs">{comment.autor}</span>
-                  <span className="text-xs text-muted-foreground">{comment.fecha}</span>
-                </div>
-                <p className="text-muted-foreground pl-7">{comment.texto}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Fecha de Registro */}
-      <div className="pt-4 border-t text-xs text-muted-foreground">
+      {/* Registro */}
+      <div className="pt-2 border-t text-xs text-muted-foreground flex items-center gap-1">
+        <Calendar className="w-3 h-3" />
         Registrado el {lead.fechaRegistro}
       </div>
     </div>
