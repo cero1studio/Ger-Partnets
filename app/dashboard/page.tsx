@@ -65,19 +65,20 @@ type Lead = {
   email: string
   telefono: string
   ciudad: string
-  nacionalidad: string
-  programa: string
+  nacionalidad?: string
+  programa?: string
   etapa: string
+  stageLabel?: string
   fechaRegistro: string
-  tuvoVisa: boolean
+  tuvoVisa?: boolean
   tipoVisa?: string
-  puedeCubrirCostos: string
-  aceptaInversion: boolean
-  profesion: string
-  nivelEscolaridad: string
-  nucleoFamiliar: number
+  puedeCubrirCostos?: string
+  aceptaInversion?: boolean
+  profesion?: string
+  nivelEscolaridad?: string
+  nucleoFamiliar?: number
   notas?: string
-  responsable: string
+  responsable?: string
   comentarios?: Comment[]
   reuniones?: Meeting[]
 }
@@ -111,211 +112,19 @@ const programas = [
   "Otro",
 ]
 
-// Demo users data
-const demoUsers = {
-  "demo@ger.com": {
-    nombre: "Carlos",
-    apellido: "Mendoza",
-    etiqueta: "carlos.mendoza",
-    leads: [
-      {
-        id: "1",
-        nombre: "María González",
-        email: "maria.gonzalez@email.com",
-        telefono: "+58 424 123 4567",
-        ciudad: "Caracas",
-        nacionalidad: "Venezuela",
-        programa: "EB-3 Unskilled Worker",
-        etapa: "appointmentscheduled",
-        fechaRegistro: "10/04/2026",
-        tuvoVisa: true,
-        tipoVisa: "B1/B2 Turista",
-        puedeCubrirCostos: "si",
-        aceptaInversion: true,
-        profesion: "Administradora",
-        nivelEscolaridad: "Universitario",
-        nucleoFamiliar: 4,
-        notas: "Interesada en trabajos de procesamiento de alimentos",
-        responsable: "Ana García",
-        comentarios: [
-          { id: "c1", autor: "Ana García", texto: "Primera llamada realizada, muy interesada en el programa.", fecha: "10/04/2026 10:30" },
-          { id: "c2", autor: "Ana García", texto: "Documentos pendientes: pasaporte y certificado de antecedentes.", fecha: "11/04/2026 15:00" },
-        ],
-        reuniones: [
-          { id: "r1", titulo: "Llamada de introducción", fecha: "10/04/2026 10:00", tipo: "llamada", notas: "Explicación inicial del programa" },
-        ],
-      },
-      {
-        id: "2",
-        nombre: "Roberto Herrera",
-        email: "roberto.h@gmail.com",
-        telefono: "+57 311 987 6543",
-        ciudad: "Bogotá",
-        nacionalidad: "Colombia",
-        programa: "EB-3 Skilled Worker",
-        etapa: "presentationscheduled",
-        fechaRegistro: "08/04/2026",
-        tuvoVisa: true,
-        tipoVisa: "H-1B",
-        puedeCubrirCostos: "si",
-        aceptaInversion: true,
-        profesion: "Ingeniero Industrial",
-        nivelEscolaridad: "Posgrado",
-        nucleoFamiliar: 2,
-        notas: "Ingeniero industrial con 5 años de experiencia",
-        responsable: "Luis Martínez",
-        comentarios: [
-          { id: "c3", autor: "Luis Martínez", texto: "CV revisado, perfil excelente para EB-3 Skilled.", fecha: "09/04/2026 09:00" },
-        ],
-        reuniones: [
-          { id: "r2", titulo: "Video llamada de evaluación", fecha: "09/04/2026 14:00", tipo: "video", notas: "Evaluación técnica completada" },
-        ],
-      },
-      {
-        id: "3",
-        nombre: "Ana Martínez",
-        email: "ana.martinez@outlook.com",
-        telefono: "+52 55 8765 4321",
-        ciudad: "Ciudad de México",
-        nacionalidad: "México",
-        programa: "EB-3 Unskilled Worker",
-        etapa: "decisionmakerboughtin",
-        fechaRegistro: "01/04/2026",
-        tuvoVisa: false,
-        puedeCubrirCostos: "con-financiamiento",
-        aceptaInversion: true,
-        profesion: "Técnica en Enfermería",
-        nivelEscolaridad: "Técnico",
-        nucleoFamiliar: 3,
-        notas: "Disponibilidad inmediata",
-        responsable: "Carmen López",
-        comentarios: [
-          { id: "c4", autor: "Carmen López", texto: "Reunión agendada para el viernes.", fecha: "03/04/2026 11:00" },
-          { id: "c5", autor: "Carmen López", texto: "Muy motivada, familia lista para mudarse.", fecha: "05/04/2026 16:30" },
-        ],
-        reuniones: [
-          { id: "r3", titulo: "Asesoría completa", fecha: "05/04/2026 10:00", tipo: "video", notas: "Se explicó todo el proceso EB-3" },
-        ],
-      },
-      {
-        id: "4",
-        nombre: "Luis Fernández",
-        email: "luis.f@email.com",
-        telefono: "+51 999 111 2222",
-        ciudad: "Lima",
-        nacionalidad: "Perú",
-        programa: "EB-3 Skilled Worker",
-        etapa: "closedwon",
-        fechaRegistro: "15/03/2026",
-        tuvoVisa: true,
-        tipoVisa: "B1/B2 Turista",
-        puedeCubrirCostos: "si",
-        aceptaInversion: true,
-        profesion: "Técnico en Soldadura",
-        nivelEscolaridad: "Técnico",
-        nucleoFamiliar: 5,
-        notas: "Técnico en soldadura certificado",
-        responsable: "Ana García",
-        comentarios: [
-          { id: "c6", autor: "Ana García", texto: "Pago G1 confirmado, procesando documentación.", fecha: "20/03/2026 14:00" },
-        ],
-        reuniones: [],
-      },
-      {
-        id: "5",
-        nombre: "Carmen Rojas",
-        email: "carmen.rojas@gmail.com",
-        telefono: "+593 98 765 4321",
-        ciudad: "Guayaquil",
-        nacionalidad: "Ecuador",
-        programa: "EB-3 Unskilled Worker",
-        etapa: "1062656364",
-        fechaRegistro: "01/03/2026",
-        tuvoVisa: false,
-        puedeCubrirCostos: "si",
-        aceptaInversion: true,
-        profesion: "Operaria de Producción",
-        nivelEscolaridad: "Bachillerato",
-        nucleoFamiliar: 2,
-        notas: "Proceso completado exitosamente",
-        responsable: "Luis Martínez",
-        comentarios: [
-          { id: "c7", autor: "Luis Martínez", texto: "Caso cerrado exitosamente. Cliente muy satisfecha.", fecha: "10/04/2026 09:00" },
-        ],
-        reuniones: [
-          { id: "r4", titulo: "Llamada de cierre", fecha: "10/04/2026 09:00", tipo: "llamada", notas: "Felicitaciones y próximos pasos" },
-        ],
-      },
-      {
-        id: "6",
-        nombre: "Pedro Sánchez",
-        email: "pedro.s@hotmail.com",
-        telefono: "+58 412 333 4444",
-        ciudad: "Maracaibo",
-        nacionalidad: "Venezuela",
-        programa: "H-2B Visa",
-        etapa: "qualifiedtobuy",
-        fechaRegistro: "12/04/2026",
-        tuvoVisa: false,
-        puedeCubrirCostos: "no",
-        aceptaInversion: false,
-        profesion: "Electricista",
-        nivelEscolaridad: "Bachillerato",
-        nucleoFamiliar: 1,
-        notas: "",
-        responsable: "Carmen López",
-        comentarios: [
-          { id: "c8", autor: "Carmen López", texto: "Tercer intento de contacto sin respuesta.", fecha: "14/04/2026 10:00" },
-        ],
-        reuniones: [],
-      },
-      {
-        id: "7",
-        nombre: "Isabella Torres",
-        email: "isabella.t@email.com",
-        telefono: "+57 320 555 6666",
-        ciudad: "Medellín",
-        nacionalidad: "Colombia",
-        programa: "EB-3 Unskilled Worker",
-        etapa: "1226150813",
-        fechaRegistro: "05/04/2026",
-        tuvoVisa: true,
-        tipoVisa: "B1/B2 Turista",
-        puedeCubrirCostos: "si",
-        aceptaInversion: true,
-        profesion: "Auxiliar Contable",
-        nivelEscolaridad: "Técnico",
-        nucleoFamiliar: 3,
-        notas: "Referencias laborales verificadas",
-        responsable: "Ana García",
-        comentarios: [
-          { id: "c9", autor: "Ana García", texto: "En proceso de recopilar documentos adicionales.", fecha: "12/04/2026 11:00" },
-        ],
-        reuniones: [
-          { id: "r5", titulo: "Seguimiento semanal", fecha: "12/04/2026 11:00", tipo: "llamada" },
-        ],
-      },
-    ] as Lead[],
-  },
-  "nuevo@ger.com": {
-    nombre: "Patricia",
-    apellido: "López",
-    etiqueta: "patricia.lopez",
-    leads: [] as Lead[],
-  },
-}
 
 export default function DashboardPage() {
-  const [currentUser, setCurrentUser] = useState("demo@ger.com")
   const [leads, setLeads] = useState<Lead[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
-  
+  const [loadingLeads, setLoadingLeads] = useState(true)
+
   useEffect(() => {
-    const storedUser = localStorage.getItem("ger_demo_user") || "demo@ger.com"
-    setCurrentUser(storedUser)
-    const userData = demoUsers[storedUser as keyof typeof demoUsers] || demoUsers["demo@ger.com"]
-    setLeads(userData.leads)
+    fetch("/api/leads")
+      .then(r => r.ok ? r.json() : { leads: [] })
+      .then(data => setLeads(data.leads ?? []))
+      .catch(() => setLeads([]))
+      .finally(() => setLoadingLeads(false))
   }, [])
   
   // Form state
@@ -337,35 +146,35 @@ export default function DashboardPage() {
     notas: "",
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    const newLead: Lead = {
-      id: Date.now().toString(),
-      nombre: `${formData.nombre} ${formData.apellido}`,
-      email: formData.email,
-      telefono: formData.telefono,
-      ciudad: formData.ciudad,
-      nacionalidad: formData.nacionalidad,
-      programa: formData.programa,
-      etapa: "appointmentscheduled",
-      fechaRegistro: new Date().toLocaleDateString("es-ES"),
-      tuvoVisa: formData.tuvoVisa,
-      tipoVisa: formData.tuvoVisa ? formData.tipoVisa : undefined,
-      puedeCubrirCostos: formData.puedeCubrirCostos,
-      aceptaInversion: formData.puedeCubrirCostos === "con-financiamiento",
-      profesion: formData.profesion,
-      nivelEscolaridad: formData.nivelEscolaridad,
-      nucleoFamiliar: parseInt(formData.nucleoFamiliar),
-      notas: formData.notas,
-      responsable: "Sin asignar",
-      comentarios: [],
-      reuniones: [],
-    }
+  const [isSaving, setIsSaving] = useState(false)
 
-    setLeads([...leads, newLead])
-    setIsDialogOpen(false)
-    resetForm()
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSaving(true)
+    try {
+      const res = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nombre:    formData.nombre,
+          apellido:  formData.apellido,
+          email:     formData.email,
+          telefono:  formData.telefono,
+          ciudad:    formData.ciudad,
+          programa:  formData.programa,
+          notas:     formData.notas,
+        }),
+      })
+      if (res.ok) {
+        // Recargar leads desde HubSpot
+        const updated = await fetch("/api/leads").then(r => r.json())
+        setLeads(updated.leads ?? [])
+        setIsDialogOpen(false)
+        resetForm()
+      }
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const resetForm = () => {
@@ -390,6 +199,18 @@ export default function DashboardPage() {
 
   const getLeadsByEtapa = (etapaId: string) => {
     return leads.filter((lead) => lead.etapa === etapaId)
+  }
+
+  // Loading state
+  if (loadingLeads) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <p className="text-sm">Cargando referidos...</p>
+        </div>
+      </div>
+    )
   }
 
   // Empty State
@@ -427,6 +248,7 @@ export default function DashboardPage() {
                   setFormData={setFormData}
                   handleSubmit={handleSubmit}
                   onCancel={() => { setIsDialogOpen(false); resetForm(); }}
+                  isSaving={isSaving}
                 />
               </DialogContent>
             </Dialog>
@@ -468,6 +290,7 @@ export default function DashboardPage() {
               setFormData={setFormData}
               handleSubmit={handleSubmit}
               onCancel={() => { setIsDialogOpen(false); resetForm(); }}
+              isSaving={isSaving}
             />
           </DialogContent>
         </Dialog>
@@ -764,6 +587,7 @@ type LeadFormProps = {
   setFormData: React.Dispatch<React.SetStateAction<LeadFormProps["formData"]>>
   handleSubmit: (e: React.FormEvent) => void
   onCancel: () => void
+  isSaving?: boolean
 }
 
 const nivelesEscolaridad = [
@@ -776,7 +600,7 @@ const nivelesEscolaridad = [
   "Otro",
 ]
 
-function LeadForm({ formData, setFormData, handleSubmit, onCancel }: LeadFormProps) {
+function LeadForm({ formData, setFormData, handleSubmit, onCancel, isSaving }: LeadFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {/* Información Básica */}
@@ -1005,8 +829,13 @@ function LeadForm({ formData, setFormData, handleSubmit, onCancel }: LeadFormPro
         <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
           Cancelar
         </Button>
-        <Button type="submit" className="flex-1">
-          Guardar Referido
+        <Button type="submit" className="flex-1" disabled={isSaving}>
+          {isSaving ? (
+            <span className="flex items-center gap-2">
+              <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+              Guardando...
+            </span>
+          ) : "Guardar Referido"}
         </Button>
       </div>
     </form>

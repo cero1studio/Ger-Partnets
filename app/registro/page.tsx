@@ -70,13 +70,26 @@ export default function RegistroPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
     if (!validateForm()) return
-    
+
     setIsLoading(true)
-    // Simulate registration - here you would create the HubSpot tag with generatedTag
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    router.push("/dashboard")
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre: firstName, apellido: lastName, email, password }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setErrors({ email: data.error ?? "Error al registrarse" })
+        return
+      }
+      router.push("/dashboard")
+    } catch {
+      setErrors({ email: "Error de conexión. Intenta de nuevo." })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const features = [

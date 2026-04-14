@@ -27,30 +27,31 @@ const navigation = [
   { name: "Mi Perfil", href: "/dashboard/perfil", icon: User },
 ]
 
-// Demo users info
-const demoUsers: Record<string, { nombre: string; apellido: string; etiqueta: string }> = {
-  "demo@ger.com": { nombre: "Carlos", apellido: "Mendoza", etiqueta: "carlos.mendoza" },
-  "nuevo@ger.com": { nombre: "Patricia", apellido: "López", etiqueta: "patricia.lopez" },
-}
-
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [user, setUser] = useState({ nombre: "Usuario", apellido: "", etiqueta: "usuario" })
+  const [user, setUser] = useState({ nombre: "", apellido: "", etiqueta: "" })
   const pathname = usePathname()
   const router = useRouter()
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("ger_demo_user") || "demo@ger.com"
-    const userData = demoUsers[storedUser] || demoUsers["demo@ger.com"]
-    setUser(userData)
-  }, [])
+    fetch("/api/auth/me")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.user) {
+          setUser({ nombre: data.user.nombre, apellido: data.user.apellido, etiqueta: data.user.etiqueta })
+        } else {
+          router.push("/")
+        }
+      })
+      .catch(() => router.push("/"))
+  }, [router])
 
-  const handleLogout = () => {
-    localStorage.removeItem("ger_demo_user")
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" })
     router.push("/")
   }
   

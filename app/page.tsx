@@ -39,14 +39,26 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
     if (!validateForm()) return
-    
+
     setIsLoading(true)
-    // Store selected demo user
-    localStorage.setItem("ger_demo_user", email)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    router.push("/dashboard")
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setErrors({ email: data.error ?? "Credenciales incorrectas" })
+        return
+      }
+      router.push("/dashboard")
+    } catch {
+      setErrors({ email: "Error de conexión. Intenta de nuevo." })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const features = [
@@ -199,13 +211,7 @@ export default function LoginPage() {
                 </Button>
               </form>
 
-              <div className="mt-6 pt-6 border-t space-y-4">
-                <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
-                  <p className="font-medium text-foreground text-sm mb-2">Usuarios Demo:</p>
-                  <p><span className="font-mono bg-muted px-1 rounded">demo@ger.com</span> - Con leads de ejemplo</p>
-                  <p><span className="font-mono bg-muted px-1 rounded">nuevo@ger.com</span> - Sin leads (vacío)</p>
-                  <p className="text-xs mt-1">Contraseña: cualquiera (6+ caracteres)</p>
-                </div>
+              <div className="mt-6 pt-6 border-t">
                 <p className="text-sm text-muted-foreground text-center">
                   ¿No tienes cuenta?{" "}
                   <Link href="/registro" className="text-primary hover:underline font-medium">
