@@ -397,38 +397,50 @@ function LeadDetail({ lead }: { lead: Lead; onClose: () => void }) {
         <section className="space-y-3">
           <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
             <UserPlus className="w-4 h-4 text-primary" />
-            Información de Contacto
+            Contacto del Referido
           </h4>
-          <div className="grid gap-3 bg-muted/30 p-4 rounded-xl border border-border">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-background rounded-lg border border-border shadow-sm shrink-0">
-                <Mail className="w-4 h-4 text-muted-foreground" />
+          <div className="flex flex-col sm:flex-row gap-3">
+            {lead.email && (
+              <div className="flex-1 p-3 bg-muted/20 rounded-xl border border-border flex items-center gap-3">
+                <div className="p-2 bg-primary/5 rounded-lg text-primary">
+                  <Mail className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase text-muted-foreground font-semibold">Email</p>
+                  <p className="text-sm font-medium text-foreground truncate">{lead.email}</p>
+                </div>
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Correo Electrónico</p>
-                <p className="text-sm font-medium text-foreground truncate">{lead.email || "No registrado"}</p>
-              </div>
-            </div>
+            )}
             
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-background rounded-lg border border-border shadow-sm shrink-0">
-                <Phone className="w-4 h-4 text-muted-foreground" />
+            {lead.telefono && (
+              <div className="flex-1 p-3 bg-muted/20 rounded-xl border border-border flex items-center gap-3">
+                <div className="p-2 bg-primary/5 rounded-lg text-primary">
+                  <Phone className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase text-muted-foreground font-semibold">Teléfono</p>
+                  <p className="text-sm font-medium text-foreground">{lead.telefono}</p>
+                </div>
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Teléfono</p>
-                <p className="text-sm font-medium text-foreground">{lead.telefono || "No registrado"}</p>
+            )}
+            
+            {lead.nacionalidad && (
+              <div className="flex-1 p-3 bg-muted/20 rounded-xl border border-border flex items-center gap-3">
+                <div className="p-2 bg-primary/5 rounded-lg text-primary">
+                  <Globe2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase text-muted-foreground font-semibold">País</p>
+                  <p className="text-sm font-medium text-foreground">{lead.nacionalidad}</p>
+                </div>
               </div>
-            </div>
+            )}
 
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-background rounded-lg border border-border shadow-sm shrink-0">
-                <Globe2 className="w-4 h-4 text-muted-foreground" />
+            {(!lead.email && !lead.telefono && !lead.nacionalidad) && (
+              <div className="w-full p-4 bg-muted/30 rounded-xl border border-border/50 text-center text-sm text-muted-foreground">
+                Información de contacto pendiente
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Nacionalidad</p>
-                <p className="text-sm font-medium text-foreground">{lead.nacionalidad || "No registrada"}</p>
-              </div>
-            </div>
+            )}
           </div>
         </section>
 

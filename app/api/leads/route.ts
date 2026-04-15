@@ -48,6 +48,8 @@ export async function POST(req: NextRequest) {
 
     // Codificar campos de perfilamiento en la descripción del deal
     const perfilLines = [
+      `[Email de Respaldo]: ${email}`,
+      `[Teléfono de Respaldo]: ${telefono}`,
       nacionalidad   ? `Nacionalidad: ${nacionalidad}` : null,
       programa       ? `Programa: ${programa}` : null,
       profesion      ? `Profesión: ${profesion}` : null,

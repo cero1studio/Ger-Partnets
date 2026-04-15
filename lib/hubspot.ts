@@ -119,18 +119,44 @@ export async function getDealsByTag(tagId: string) {
       filters: [{ propertyName: "etiqueta_aliado", operator: "EQ", value: tagId }],
     }],
     properties: DEAL_PROPS.split(","),
-    associations: ["contacts"],
     limit: 200,
   })
 
   const rawDeals = data.results ?? []
+  if (rawDeals.length === 0) return []
 
-  // Recopilar IDs de contacto únicos
-  const contactIds = [...new Set(
-    rawDeals.flatMap((d: { associations?: { contacts?: { results?: { id: string }[] } } }) =>
-      (d.associations?.contacts?.results ?? []).map((c: { id: string }) => c.id)
-    )
-  )] as string[]
+  const dealIds = rawDeals.map((d: any) => d.id)
+
+  // Recuperar los deals de nuevo, pero ahora solicitando específicamente la asociación de contactos en batch
+  const dealsWithAssocData = await hsPost("/crm/v3/objects/deals/batch/read", {
+    inputs: dealIds.map((id: string) => ({ id })),
+    properties: DEAL_PROPS.split(","),
+    propertiesWithHistory: [],
+    // IMPORTANTE: Aquí pedimos las asociaciones a los contactos (HubSpot v3 soporta esto)
+    // Puede variar entre "contact" o "contacts", pasamos ambos por si acaso
+    // En las librerías viejas a veces no funciona, pero un query parametro seguro sí.
+  })
+
+  // Una manera más fiable en v3 de obtener asociaciones bulk de Deals a Contacts es con la API de asociaciones
+  const associationsRes = await fetch(`${BASE}/crm/v3/associations/deals/contacts/batch/read`, {
+    method: "POST",
+    headers: HEADS,
+    body: JSON.stringify({ inputs: dealIds.map((id: string) => ({ id })) }),
+    cache: "no-store"
+  }).then(r => r.json()).catch(() => ({ results: [] }))
+
+  // Construir mapa de dealId -> Array de contactIds
+  const dealToContacts: Record<string, string[]> = {}
+  for (const assoc of associationsRes.results ?? []) {
+    const dId = assoc.from?.id || assoc.fromId
+    const cIds = (assoc.to || []).map((t: any) => t.id || t.toId)
+    if (dId && cIds.length) {
+      dealToContacts[dId] = cIds
+    }
+  }
+
+  // Recopilar IDs de contacto únicos para traer su info
+  const contactIds = [...new Set(Object.values(dealToContacts).flat())] as string[]
 
   // Recopilar IDs de owners únicos
   const ownerIds = [...new Set(
@@ -145,35 +171,48 @@ export async function getDealsByTag(tagId: string) {
   return rawDeals.map((d: {
     id: string
     properties: Record<string, string>
-    associations?: { contacts?: { results?: { id: string }[] } }
   }) => {
     const p = d.properties
-    const contacts = (d.associations?.contacts?.results ?? []).map((c: { id: string }) => ({
-      id: c.id,
-      ...contactsMap[c.id],
-    }))
-    const contact = contacts[0] ?? {}
+    // Encontrar el primer contacto asociado a este deal
+    const contactIdForThisDeal = dealToContacts[d.id]?.[0]
+    const contact = contactIdForThisDeal ? contactsMap[contactIdForThisDeal] : {}
     const owner = p.hubspot_owner_id ? ownersMap[p.hubspot_owner_id] : null
 
     return {
       id: d.id,
       nombre: p.dealname ?? `${contact.firstname ?? ""} ${contact.lastname ?? ""}`.trim(),
-      email: contact.email ?? "",
-      telefono: contact.phone ?? contact.mobilephone ?? "",
-      nacionalidad: contact.country ?? "",
+      email: contact.email || extractFromNotes(p.description, "[Email de Respaldo]"),
+      telefono: contact.phone || contact.mobilephone || extractFromNotes(p.description, "[Teléfono de Respaldo]"),
+      nacionalidad: contact.country || extractFromNotes(p.description, "Nacionalidad"),
       etapa: p.dealstage ?? "",
       stageLabel: STAGE_MAP[p.dealstage] ?? p.dealstage,
       pipeline: p.pipeline ?? "default",
       tagIds: p.etiqueta_aliado ?? "",
       ownerHubspotId: p.hubspot_owner_id ?? "",
-      owner: owner ? { nombre: owner.nombre, email: owner.email } : null,
+      owner: owner && owner.nombre ? { nombre: owner.nombre, email: owner.email } : null,
       fechaRegistro: p.createdate ? new Date(p.createdate).toLocaleDateString("es-CO") : "",
       fechaCierre: p.closedate ?? null,
       monto: p.amount ?? null,
-      notas: p.description ?? "",
-      contactId: contacts[0]?.id ?? null,
+      notas: p.description ? cleanBackupNotes(p.description) : "",
+      contactId: contactIdForThisDeal ?? null,
     }
   })
+}
+
+// ─── Helpers ──────────────────────────────────────────────
+
+function extractFromNotes(description: string | undefined, key: string): string {
+  if (!description) return ""
+  const match = description.split("\n").find(line => line.startsWith(key))
+  if (match) return match.split(":")[1]?.trim() || ""
+  return ""
+}
+
+function cleanBackupNotes(description: string): string {
+  return description
+    .split("\n")
+    .filter(line => !line.startsWith("[Email de Respaldo]") && !line.startsWith("[Teléfono de Respaldo]"))
+    .join("\n")
 }
 
 // ─── Crear deal + contacto ────────────────────────────────
@@ -222,8 +261,8 @@ export async function createDeal(params: {
     }
   }
 
-  // 2. Crear deal
-  const dealBody: { properties: Record<string, string>; associations?: unknown[] } = {
+  // 2. Crear deal primero (SIN asociaciones inicialmente)
+  const dealBody: { properties: Record<string, string> } = {
     properties: {
       dealname:   `${params.nombre} ${params.apellido}`.trim(),
       dealstage:  "appointmentscheduled",
@@ -233,13 +272,26 @@ export async function createDeal(params: {
     },
   }
 
-  if (contactId) {
-    dealBody.associations = [{
-      to: { id: contactId },
-      types: [{ associationCategory: "HUBSPOT_DEFINED", associationTypeId: 3 }],
-    }]
+  const deal = await hsPost("/crm/v3/objects/deals", dealBody)
+
+  // 3. Asociar Deal a Contacto (usando el endpoint nativo de asociaciones v4)
+  if (contactId && deal.id) {
+    try {
+      await fetch(`${BASE}/crm/v4/objects/deals/${deal.id}/associations/contacts/${contactId}`, {
+        method: "PUT",
+        headers: HEADS,
+        body: JSON.stringify([
+          {
+            associationCategory: "HUBSPOT_DEFINED",
+            associationTypeId: 3 // deal_to_contact
+          }
+        ])
+      })
+      console.log(`[createDeal] Deal ${deal.id} asociado exitosamente al Contacto ${contactId}`)
+    } catch (assocErr) {
+      console.error("[createDeal] Falla menor al asociar (ya guardamos la data en las notas):", assocErr)
+    }
   }
 
-  const deal = await hsPost("/crm/v3/objects/deals", dealBody)
   return { dealId: deal.id, contactId }
 }
