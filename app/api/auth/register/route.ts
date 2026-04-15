@@ -3,7 +3,6 @@ import bcrypt from "bcryptjs"
 import { connectDB } from "@/lib/mongodb"
 import User from "@/lib/models/User"
 import { signToken, cookieName } from "@/lib/auth"
-import { createAliaoTag } from "@/lib/hubspot"
 
 export async function POST(req: NextRequest) {
   try {
@@ -30,16 +29,13 @@ export async function POST(req: NextRequest) {
 
     const hash = await bcrypt.hash(password, 10)
 
-    // Crear tag en HubSpot para este aliado
-    const hubspotTagId = await createAliaoTag(etiqueta)
-
     const user = await User.create({
       nombre,
       apellido,
       email: email.toLowerCase(),
       password: hash,
       etiqueta,
-      hubspotTagId: hubspotTagId ?? etiqueta,
+      hubspotTagId: etiqueta,
     })
 
     const token = signToken({

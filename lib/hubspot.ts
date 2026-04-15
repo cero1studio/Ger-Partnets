@@ -24,7 +24,7 @@ export const STAGE_MAP: Record<string, string> = {
 }
 
 const DEAL_PROPS = [
-  "dealname", "dealstage", "pipeline", "hs_tag_ids",
+  "dealname", "dealstage", "pipeline", "etiqueta_aliado",
   "hubspot_owner_id", "createdate", "closedate",
   "amount", "description",
 ].join(",")
@@ -90,7 +90,7 @@ async function getContactsBatch(ids: string[]): Promise<Record<string, Record<st
 export async function getDealsByTag(tagId: string) {
   const data = await hsPost("/crm/v3/objects/deals/search", {
     filterGroups: [{
-      filters: [{ propertyName: "hs_tag_ids", operator: "EQ", value: tagId }],
+      filters: [{ propertyName: "etiqueta_aliado", operator: "EQ", value: tagId }],
     }],
     properties: DEAL_PROPS.split(","),
     associations: ["contacts"],
@@ -128,7 +128,7 @@ export async function getDealsByTag(tagId: string) {
       etapa: p.dealstage ?? "",
       stageLabel: STAGE_MAP[p.dealstage] ?? p.dealstage,
       pipeline: p.pipeline ?? "default",
-      tagIds: p.hs_tag_ids ?? "",
+      tagIds: p.etiqueta_aliado ?? "",
       ownerHubspotId: p.hubspot_owner_id ?? "",
       fechaRegistro: p.createdate ? new Date(p.createdate).toLocaleDateString("es-CO") : "",
       fechaCierre: p.closedate ?? null,
@@ -184,7 +184,7 @@ export async function createDeal(params: {
       dealname:   `${params.nombre} ${params.apellido}`.trim(),
       dealstage:  "appointmentscheduled",
       pipeline:   "default",
-      hs_tag_ids: params.tagId,
+      etiqueta_aliado: params.tagId,
       description: params.notas ?? "",
     },
   }
@@ -198,46 +198,4 @@ export async function createDeal(params: {
 
   const deal = await hsPost("/crm/v3/objects/deals", dealBody)
   return { dealId: deal.id, contactId }
-}
-
-// ─── Crear tag del aliado en HubSpot ─────────────────────
-// Trae las opciones existentes, añade la nueva y hace PATCH
-// con la lista completa para no borrar los tags previos.
-
-export async function createAliaoTag(etiqueta: string): Promise<string | null> {
-  try {
-    // 1. Traer opciones actuales
-    const current = await hsGet("/crm/v3/properties/deals/hs_tag_ids")
-    const existing: Array<{ label: string; value: string; displayOrder: number; hidden: boolean }> =
-      current.options ?? []
-
-    // Si ya existe, no duplicar
-    const already = existing.find(o => o.value === etiqueta)
-    if (already) return already.value
-
-    // 2. Añadir la nueva opción al final
-    const maxOrder = existing.reduce((max, o) => Math.max(max, o.displayOrder ?? 0), -1)
-    const newOptions = [
-      ...existing.map(o => ({
-        label:        o.label,
-        value:        o.value,
-        displayOrder: o.displayOrder,
-        hidden:       o.hidden ?? false,
-      })),
-      {
-        label:        etiqueta,
-        value:        etiqueta,
-        displayOrder: maxOrder + 1,
-        hidden:       false,
-      },
-    ]
-
-    // 3. PATCH con la lista completa
-    const updated = await hsPatch("/crm/v3/properties/deals/hs_tag_ids", { options: newOptions })
-    const opt = (updated.options ?? []).find((o: { value: string }) => o.value === etiqueta)
-    return opt?.value ?? etiqueta
-  } catch (err) {
-    console.error("[createAliaoTag]", err)
-    return null
-  }
 }

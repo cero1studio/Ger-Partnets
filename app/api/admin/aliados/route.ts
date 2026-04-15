@@ -3,7 +3,6 @@ import bcrypt from "bcryptjs"
 import { getSession } from "@/lib/auth"
 import { connectDB } from "@/lib/mongodb"
 import User from "@/lib/models/User"
-import { createAliaoTag } from "@/lib/hubspot"
 
 async function requireAdmin() {
   const session = await getSession()
@@ -57,7 +56,6 @@ export async function POST(req: NextRequest) {
     }
 
     const hash = await bcrypt.hash(password, 10)
-    const hubspotTagId = await createAliaoTag(etiqueta)
 
     const user = await User.create({
       nombre,
@@ -65,7 +63,7 @@ export async function POST(req: NextRequest) {
       email: email.toLowerCase(),
       password: hash,
       etiqueta,
-      hubspotTagId: hubspotTagId ?? etiqueta,
+      hubspotTagId: etiqueta,
       role: "aliado",
     })
 
