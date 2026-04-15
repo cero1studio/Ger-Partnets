@@ -242,6 +242,10 @@ export default function DashboardPage() {
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Nuevo Referido</DialogTitle>
+              <DialogDescription>Formulario interactivo para registrar un nuevo candidato</DialogDescription>
+            </DialogHeader>
             <LeadForm 
               formData={formData}
               setFormData={setFormData}
@@ -284,7 +288,7 @@ export default function DashboardPage() {
       </div>
 
       <Sheet open={!!selectedLead} onOpenChange={(open) => !open && setSelectedLead(null)}>
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+        <SheetContent className="w-full sm:max-w-lg overflow-hidden flex flex-col p-0">
           {selectedLead && <LeadDetail lead={selectedLead} onClose={() => setSelectedLead(null)} />}
         </SheetContent>
       </Sheet>
@@ -348,38 +352,38 @@ function LeadDetail({ lead }: { lead: Lead; onClose: () => void }) {
   const etapa = etapas.find(e => e.id === lead.etapa)
 
   return (
-    <div className="flex flex-col h-full bg-background rounded-l-2xl">
-      <SheetHeader className="pb-6 border-b border-border">
+    <div className="flex flex-col h-full bg-background">
+      <SheetHeader className="px-6 py-6 border-b border-border bg-muted/10 shrink-0">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
-            <Avatar className="w-14 h-14 border-2 border-primary/20">
+            <Avatar className="w-14 h-14 border-2 border-primary/20 shadow-sm">
               <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold">
                 {lead.nombre.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div>
               <SheetTitle className="text-xl font-bold text-foreground">{lead.nombre}</SheetTitle>
-              <Badge className={`${etapa?.color} text-white text-xs mt-1 border-none shadow-sm`}>
+              <Badge className={`${etapa?.color} text-white text-xs mt-1.5 border-none shadow-sm`}>
                 {etapa?.nombre ?? lead.etapa}
               </Badge>
             </div>
           </div>
         </div>
-        <SheetDescription className="pt-2 text-sm mt-2">
+        <SheetDescription className="pt-3 text-sm mt-1">
           Detalles completos del candidato referido.
         </SheetDescription>
       </SheetHeader>
 
-      <div className="flex-1 overflow-y-auto py-6 space-y-8 pr-2 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto px-6 py-8 space-y-10 custom-scrollbar">
         
         {/* Asesor Asignado */}
         {lead.owner && (
-          <section className="space-y-3">
+          <section className="space-y-4">
             <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
               <Users className="w-4 h-4 text-primary" />
               Asesor Asignado en HubSpot
             </h4>
-            <div className="p-4 rounded-xl border border-primary/20 bg-primary/5 flex items-center gap-4">
+            <div className="p-4 rounded-xl border border-primary/20 bg-primary/5 flex items-center gap-4 transition-colors hover:bg-primary/10">
               <Avatar className="w-10 h-10 border border-primary/20 shadow-sm">
                 <AvatarFallback className="bg-white text-primary font-bold text-xs">
                   {lead.owner.nombre.split(" ").map(n => n[0]).join("").slice(0, 2)}
@@ -394,50 +398,50 @@ function LeadDetail({ lead }: { lead: Lead; onClose: () => void }) {
         )}
 
         {/* Contacto */}
-        <section className="space-y-3">
+        <section className="space-y-4">
           <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
             <UserPlus className="w-4 h-4 text-primary" />
             Contacto del Referido
           </h4>
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col gap-4">
             {lead.email && (
-              <div className="flex-1 p-3 bg-muted/20 rounded-xl border border-border flex items-center gap-3">
-                <div className="p-2 bg-primary/5 rounded-lg text-primary">
-                  <Mail className="w-4 h-4" />
+              <div className="flex-1 p-4 bg-muted/10 rounded-xl border border-border flex items-center gap-4 transition-colors hover:bg-muted/30">
+                <div className="p-2.5 bg-primary/5 rounded-xl text-primary shadow-sm border border-primary/10">
+                  <Mail className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] uppercase text-muted-foreground font-semibold">Email</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">Correo Electrónico</p>
                   <p className="text-sm font-medium text-foreground truncate">{lead.email}</p>
                 </div>
               </div>
             )}
             
             {lead.telefono && (
-              <div className="flex-1 p-3 bg-muted/20 rounded-xl border border-border flex items-center gap-3">
-                <div className="p-2 bg-primary/5 rounded-lg text-primary">
-                  <Phone className="w-4 h-4" />
+              <div className="flex-1 p-4 bg-muted/10 rounded-xl border border-border flex items-center gap-4 transition-colors hover:bg-muted/30">
+                <div className="p-2.5 bg-primary/5 rounded-xl text-primary shadow-sm border border-primary/10">
+                  <Phone className="w-5 h-5" />
                 </div>
-                <div>
-                  <p className="text-[10px] uppercase text-muted-foreground font-semibold">Teléfono</p>
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">Teléfono</p>
                   <p className="text-sm font-medium text-foreground">{lead.telefono}</p>
                 </div>
               </div>
             )}
             
             {lead.nacionalidad && (
-              <div className="flex-1 p-3 bg-muted/20 rounded-xl border border-border flex items-center gap-3">
-                <div className="p-2 bg-primary/5 rounded-lg text-primary">
-                  <Globe2 className="w-4 h-4" />
+              <div className="flex-1 p-4 bg-muted/10 rounded-xl border border-border flex items-center gap-4 transition-colors hover:bg-muted/30">
+                <div className="p-2.5 bg-primary/5 rounded-xl text-primary shadow-sm border border-primary/10">
+                  <Globe2 className="w-5 h-5" />
                 </div>
-                <div>
-                  <p className="text-[10px] uppercase text-muted-foreground font-semibold">País</p>
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">Nacionalidad</p>
                   <p className="text-sm font-medium text-foreground">{lead.nacionalidad}</p>
                 </div>
               </div>
             )}
 
             {(!lead.email && !lead.telefono && !lead.nacionalidad) && (
-              <div className="w-full p-4 bg-muted/30 rounded-xl border border-border/50 text-center text-sm text-muted-foreground">
+              <div className="w-full p-6 bg-muted/30 rounded-xl border border-border/50 text-center text-sm text-muted-foreground">
                 Información de contacto pendiente
               </div>
             )}
@@ -445,30 +449,30 @@ function LeadDetail({ lead }: { lead: Lead; onClose: () => void }) {
         </section>
 
         {/* Perfilamiento y Notas */}
-        <section className="space-y-3">
+        <section className="space-y-4">
           <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
             <FileText className="w-4 h-4 text-primary" />
             Perfilamiento
           </h4>
-          <div className="bg-muted/30 p-4 rounded-xl border border-border">
+          <div className="bg-muted/10 p-6 rounded-xl border border-border shadow-sm">
             {lead.notas ? (
-              <div className="space-y-3">
+              <div className="space-y-5">
                 {lead.notas.split('\n').filter(line => line.trim()).map((line, i) => {
                   if (line.includes(':')) {
                     const [key, ...rest] = line.split(':')
                     const value = rest.join(':').trim()
                     return (
-                      <div key={i} className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2 pb-2 border-b border-border/50 last:border-0 last:pb-0">
-                        <span className="font-semibold text-foreground text-xs uppercase tracking-wide min-w-[130px]">{key.trim()}:</span>
-                        <span className="text-muted-foreground text-sm">{value || "—"}</span>
+                      <div key={i} className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4 pb-4 border-b border-border/40 last:border-0 last:pb-0">
+                        <span className="font-semibold text-foreground text-xs uppercase tracking-wide min-w-[140px] pt-0.5 opacity-80">{key.trim()}:</span>
+                        <span className="text-foreground text-sm font-medium leading-relaxed">{value || "—"}</span>
                       </div>
                     )
                   }
-                  return <p key={i} className="text-sm text-muted-foreground">{line}</p>
+                  return <p key={i} className="text-sm text-muted-foreground leading-relaxed font-medium">{line}</p>
                 })}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground italic text-center py-4">Sin información de perfilamiento adicional.</p>
+              <p className="text-sm text-muted-foreground italic text-center py-6">Sin información de perfilamiento adicional.</p>
             )}
           </div>
         </section>
@@ -572,7 +576,7 @@ function LeadForm({ formData, setFormData, handleSubmit, onCancel, isSaving }: L
   )
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col h-[75vh] sm:h-[650px] bg-background">
+    <form onSubmit={handleSubmit} className="flex flex-col h-[85vh] sm:h-[650px] max-h-screen overflow-hidden bg-background rounded-lg">
       {/* Header Modal - Progress */}
       <div className="px-6 py-4 border-b bg-muted/10 shrink-0">
         <div className="flex items-center justify-between mb-3">
