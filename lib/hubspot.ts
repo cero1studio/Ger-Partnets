@@ -53,7 +53,8 @@ async function hsPost(path: string, body: unknown) {
   })
   if (!res.ok) {
     const err = await res.text()
-    throw new Error(`HubSpot POST ${path} → ${res.status}: ${err}`)
+    console.error(`[HubSpot Error] POST ${path} -> ${res.status}:`, err)
+    throw new Error(`HubSpot POST ${path} → ${res.status}`)
   }
   return res.json()
 }
@@ -67,9 +68,34 @@ async function hsPatch(path: string, body: unknown) {
   })
   if (!res.ok) {
     const err = await res.text()
-    throw new Error(`HubSpot PATCH ${path} → ${res.status}: ${err}`)
+    console.error(`[HubSpot Error] PATCH ${path} -> ${res.status}:`, err)
+    throw new Error(`HubSpot PATCH ${path} → ${res.status}`)
   }
   return res.json()
+}
+
+// ─── Owners ───────────────────────────────────────────────
+
+/**
+ * Trae la información de los asesores (Dueños de los negocios)
+ */
+async function getOwnersBatch(ids: string[]): Promise<Record<string, { nombre: string; email: string }>> {
+  if (!ids.length) return {}
+  try {
+    const idsQuery = ids.map(id => `id=${id}`).join("&")
+    const data = await hsGet(`/crm/v3/owners/?${idsQuery}&limit=100`)
+    const result: Record<string, { nombre: string; email: string }> = {}
+    for (const owner of data.results ?? []) {
+      result[owner.id] = {
+        nombre: `${owner.firstName ?? ""} ${owner.lastName ?? ""}`.trim(),
+        email: owner.email ?? ""
+      }
+    }
+    return result
+  } catch (err) {
+    console.error("[getOwnersBatch] Error:", err)
+    return {}
+  }
 }
 
 // ─── Contactos ────────────────────────────────────────────
@@ -106,7 +132,15 @@ export async function getDealsByTag(tagId: string) {
     )
   )] as string[]
 
-  const contactsMap = await getContactsBatch(contactIds)
+  // Recopilar IDs de owners únicos
+  const ownerIds = [...new Set(
+    rawDeals.map((d: { properties: Record<string, string> }) => d.properties.hubspot_owner_id).filter(Boolean)
+  )] as string[]
+
+  const [contactsMap, ownersMap] = await Promise.all([
+    getContactsBatch(contactIds),
+    getOwnersBatch(ownerIds)
+  ])
 
   return rawDeals.map((d: {
     id: string
@@ -119,6 +153,8 @@ export async function getDealsByTag(tagId: string) {
       ...contactsMap[c.id],
     }))
     const contact = contacts[0] ?? {}
+    const owner = p.hubspot_owner_id ? ownersMap[p.hubspot_owner_id] : null
+
     return {
       id: d.id,
       nombre: p.dealname ?? `${contact.firstname ?? ""} ${contact.lastname ?? ""}`.trim(),
@@ -130,6 +166,7 @@ export async function getDealsByTag(tagId: string) {
       pipeline: p.pipeline ?? "default",
       tagIds: p.etiqueta_aliado ?? "",
       ownerHubspotId: p.hubspot_owner_id ?? "",
+      owner: owner ? { nombre: owner.nombre, email: owner.email } : null,
       fechaRegistro: p.createdate ? new Date(p.createdate).toLocaleDateString("es-CO") : "",
       fechaCierre: p.closedate ?? null,
       monto: p.amount ?? null,
@@ -164,18 +201,25 @@ export async function createDeal(params: {
       },
     })
     contactId = contactData.id
-  } catch {
+  } catch (err) {
+    console.log("[createDeal] Falla al crear contacto nuevo (quizás ya existe):", (err as Error).message)
     // Si ya existe por email, buscarlo
     try {
+      // Usamos el endpoint de busqueda viejo que suele requerir menos scopes o usamos el endpoint de busqueda nuevo con permisos básicos
       const search = await hsPost("/crm/v3/objects/contacts/search", {
         filterGroups: [{
           filters: [{ propertyName: "email", operator: "EQ", value: params.email }],
         }],
-        properties: ["hs_object_id"],
+        properties: ["email"],
         limit: 1,
       })
-      contactId = search.results?.[0]?.id ?? null
-    } catch { /* ignorar */ }
+      if (search.results && search.results.length > 0) {
+        contactId = search.results[0].id
+        console.log(`[createDeal] Contacto existente encontrado: ${contactId}`)
+      }
+    } catch (searchErr) {
+      console.error("[createDeal] No se pudo buscar el contacto existente:", (searchErr as Error).message)
+    }
   }
 
   // 2. Crear deal

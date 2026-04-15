@@ -57,6 +57,7 @@ type Lead = {
   stageLabel?: string
   fechaRegistro: string
   notas?: string
+  owner?: { nombre: string; email: string } | null
 }
 
 // Map actual pipeline stages using their native HubSpot IDs
@@ -89,6 +90,7 @@ export default function DashboardPage() {
         return r.json()
       })
       .then(data => {
+        console.log("LEADS DATA RECIBIDA:", data) // ← ESTO AYUDARÁ A DEBUGGEAR EN TU CONSOLA DEL NAVEGADOR
         if (data?.leads) setLeads(data.leads)
         setLoadingLeads(false)
       })
@@ -293,34 +295,49 @@ export default function DashboardPage() {
 function LeadCard({ lead, onClick }: { lead: Lead; onClick: () => void }) {
   return (
     <Card
-      className="bg-card hover:shadow-md transition-shadow cursor-pointer"
+      className="bg-card hover:shadow-md transition-all hover:-translate-y-0.5 cursor-pointer border-muted/60 relative overflow-hidden"
       onClick={onClick}
     >
-      <CardContent className="p-4 space-y-2">
-        <h3 className="font-medium text-foreground text-sm leading-tight">{lead.nombre}</h3>
-        <div className="space-y-1 text-xs text-muted-foreground">
+      <div className="absolute top-0 left-0 w-1 h-full bg-primary/20" />
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="font-semibold text-foreground text-sm leading-tight line-clamp-2">{lead.nombre}</h3>
+          {lead.owner && (
+            <Avatar className="w-6 h-6 shrink-0 border border-border" title={`Asesor: ${lead.owner.nombre}`}>
+              <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-medium">
+                {lead.owner.nombre.split(" ").map(n => n[0]).join("").slice(0, 2)}
+              </AvatarFallback>
+            </Avatar>
+          )}
+        </div>
+        
+        <div className="space-y-1.5 text-xs text-muted-foreground">
           {lead.email && (
             <div className="flex items-center gap-2">
-              <Mail className="w-3 h-3 shrink-0" />
+              <Mail className="w-3.5 h-3.5 shrink-0 text-muted-foreground/70" />
               <span className="truncate">{lead.email}</span>
             </div>
           )}
           {lead.telefono && (
             <div className="flex items-center gap-2">
-              <Phone className="w-3 h-3 shrink-0" />
+              <Phone className="w-3.5 h-3.5 shrink-0 text-muted-foreground/70" />
               <span>{lead.telefono}</span>
             </div>
           )}
           {lead.nacionalidad && (
             <div className="flex items-center gap-2">
-              <MapPin className="w-3 h-3 shrink-0" />
-              <span>{lead.nacionalidad}</span>
+              <MapPin className="w-3.5 h-3.5 shrink-0 text-muted-foreground/70" />
+              <span className="truncate">{lead.nacionalidad}</span>
             </div>
           )}
-          <div className="flex items-center gap-2">
+        </div>
+        
+        <div className="pt-2 mt-2 border-t border-border/50 flex items-center justify-between text-[11px] text-muted-foreground font-medium">
+          <div className="flex items-center gap-1.5">
             <Calendar className="w-3 h-3 shrink-0" />
             <span>{lead.fechaRegistro}</span>
           </div>
+          <span className="text-primary hover:underline">Ver detalle</span>
         </div>
       </CardContent>
     </Card>
@@ -331,56 +348,119 @@ function LeadDetail({ lead }: { lead: Lead; onClose: () => void }) {
   const etapa = etapas.find(e => e.id === lead.etapa)
 
   return (
-    <div className="space-y-6">
-      <SheetHeader>
-        <SheetTitle className="flex items-center gap-3">
-          <Avatar className="w-10 h-10">
-            <AvatarFallback className="bg-primary text-primary-foreground font-bold">
-              {lead.nombre.split(" ").map(n => n[0]).join("").slice(0, 2)}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <p className="text-lg font-semibold">{lead.nombre}</p>
-            <Badge className={`${etapa?.color} text-white text-xs mt-1`}>
-              {etapa?.nombre ?? lead.etapa}
-            </Badge>
+    <div className="flex flex-col h-full bg-background rounded-l-2xl">
+      <SheetHeader className="pb-6 border-b border-border">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-4">
+            <Avatar className="w-14 h-14 border-2 border-primary/20">
+              <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold">
+                {lead.nombre.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <SheetTitle className="text-xl font-bold text-foreground">{lead.nombre}</SheetTitle>
+              <Badge className={`${etapa?.color} text-white text-xs mt-1 border-none shadow-sm`}>
+                {etapa?.nombre ?? lead.etapa}
+              </Badge>
+            </div>
           </div>
-        </SheetTitle>
-        <SheetDescription>Detalle del candidato referido</SheetDescription>
+        </div>
+        <SheetDescription className="pt-2 text-sm mt-2">
+          Detalles completos del candidato referido.
+        </SheetDescription>
       </SheetHeader>
 
-      <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-foreground border-b pb-2">Contacto</h3>
-        <div className="grid gap-2 text-sm">
-          {lead.email && (
-            <div className="flex items-center gap-3">
-              <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
-              <a href={`mailto:${lead.email}`} className="text-primary hover:underline truncate">{lead.email}</a>
+      <div className="flex-1 overflow-y-auto py-6 space-y-8 pr-2 custom-scrollbar">
+        
+        {/* Asesor Asignado */}
+        {lead.owner && (
+          <section className="space-y-3">
+            <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <Users className="w-4 h-4 text-primary" />
+              Asesor Asignado en HubSpot
+            </h4>
+            <div className="p-4 rounded-xl border border-primary/20 bg-primary/5 flex items-center gap-4">
+              <Avatar className="w-10 h-10 border border-primary/20 shadow-sm">
+                <AvatarFallback className="bg-white text-primary font-bold text-xs">
+                  {lead.owner.nombre.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">{lead.owner.nombre}</p>
+                <p className="text-xs text-muted-foreground truncate">{lead.owner.email}</p>
+              </div>
             </div>
-          )}
-          {lead.telefono && (
-            <div className="flex items-center gap-3">
-              <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
-              <a href={`tel:${lead.telefono}`} className="text-primary hover:underline">{lead.telefono}</a>
-            </div>
-          )}
-          {lead.nacionalidad && (
-            <div className="flex items-center gap-3">
-              <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
-              <span>{lead.nacionalidad}</span>
-            </div>
-          )}
-        </div>
-      </div>
+          </section>
+        )}
 
-      {lead.notas && (
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-foreground border-b pb-2">Perfilamiento</h3>
-          <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground whitespace-pre-line">
-            {lead.notas}
+        {/* Contacto */}
+        <section className="space-y-3">
+          <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <UserPlus className="w-4 h-4 text-primary" />
+            Información de Contacto
+          </h4>
+          <div className="grid gap-3 bg-muted/30 p-4 rounded-xl border border-border">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-background rounded-lg border border-border shadow-sm shrink-0">
+                <Mail className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Correo Electrónico</p>
+                <p className="text-sm font-medium text-foreground truncate">{lead.email || "No registrado"}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-background rounded-lg border border-border shadow-sm shrink-0">
+                <Phone className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Teléfono</p>
+                <p className="text-sm font-medium text-foreground">{lead.telefono || "No registrado"}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-background rounded-lg border border-border shadow-sm shrink-0">
+                <Globe2 className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Nacionalidad</p>
+                <p className="text-sm font-medium text-foreground">{lead.nacionalidad || "No registrada"}</p>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        </section>
+
+        {/* Perfilamiento y Notas */}
+        <section className="space-y-3">
+          <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <FileText className="w-4 h-4 text-primary" />
+            Perfilamiento
+          </h4>
+          <div className="bg-muted/30 p-4 rounded-xl border border-border">
+            {lead.notas ? (
+              <div className="space-y-3">
+                {lead.notas.split('\n').filter(line => line.trim()).map((line, i) => {
+                  if (line.includes(':')) {
+                    const [key, ...rest] = line.split(':')
+                    const value = rest.join(':').trim()
+                    return (
+                      <div key={i} className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2 pb-2 border-b border-border/50 last:border-0 last:pb-0">
+                        <span className="font-semibold text-foreground text-xs uppercase tracking-wide min-w-[130px]">{key.trim()}:</span>
+                        <span className="text-muted-foreground text-sm">{value || "—"}</span>
+                      </div>
+                    )
+                  }
+                  return <p key={i} className="text-sm text-muted-foreground">{line}</p>
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground italic text-center py-4">Sin información de perfilamiento adicional.</p>
+            )}
+          </div>
+        </section>
+      </div>
     </div>
   )
 }
