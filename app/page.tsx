@@ -6,8 +6,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle, Globe, Users, BarChart3, Eye, EyeOff } from "lucide-react"
 
 export default function LoginPage() {
@@ -77,12 +76,6 @@ export default function LoginPage() {
     },
   ]
 
-  const mobileHighlights = [
-    "Referidos en segundos",
-    "Estatus comercial en tiempo real",
-    "Control completo de aplicantes EB-3",
-  ]
-
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-slate-50/50">
       {/* Left Panel - Brand */}
@@ -133,47 +126,52 @@ export default function LoginPage() {
           showMobileLogin ? "hidden" : "flex"
         }`}
       >
-        <div className="mx-auto w-full max-w-md space-y-6">
-          <div className="flex items-center gap-2.5">
+        <div className="mx-auto w-full max-w-md min-h-[calc(100dvh-4rem)] flex flex-col">
+          <div className="flex justify-center pt-2">
             <Image
               src="/logo.png"
               alt="Global Express"
-              width={40}
-              height={40}
-              className="h-10 w-auto"
+              width={64}
+              height={64}
+              className="h-16 w-auto"
             />
-            <span className="text-primary-foreground/95 font-semibold tracking-wide">
-              Global Express
-            </span>
           </div>
 
-          <div className="space-y-2.5">
-            <h1 className="text-[1.7rem] leading-tight font-bold text-primary-foreground text-balance">
+          <div className="mt-10 space-y-5">
+            <h1 className="text-[1.9rem] leading-tight font-bold text-primary-foreground text-balance">
               Portal de Aliados Estratégicos
             </h1>
-            <p className="text-sm leading-relaxed text-primary-foreground/85">
+            <p className="text-base leading-relaxed text-primary-foreground/85">
               Gestiona tus referidos y accede a herramientas exclusivas desde cualquier dispositivo.
             </p>
+
+            <div className="space-y-3 pt-2">
+              {features.map((feature, index) => (
+                <div
+                  key={index}
+                  className="flex items-start gap-3 rounded-xl border border-primary-foreground/15 bg-primary-foreground/10 p-3"
+                >
+                  <div className="mt-0.5 h-8 w-8 rounded-lg bg-primary-foreground/15 flex items-center justify-center shrink-0">
+                    <feature.icon className="h-4 w-4 text-primary-foreground" />
+                  </div>
+                  <p className="text-sm leading-relaxed text-primary-foreground/95">{feature.text}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {mobileHighlights.map((highlight) => (
-              <span
-                key={highlight}
-                className="inline-flex items-center rounded-full border border-primary-foreground/25 bg-primary-foreground/10 px-3 py-1.5 text-xs text-primary-foreground/95"
-              >
-                {highlight}
-              </span>
-            ))}
+          <div className="mt-auto pb-2">
+            <Button
+              variant="secondary"
+              className="h-12 w-full bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-semibold"
+              onClick={() => setShowMobileLogin(true)}
+            >
+              Iniciar sesión
+            </Button>
+            <p className="mt-3 text-center text-xs text-primary-foreground/70">
+              Plataforma segura y certificada
+            </p>
           </div>
-
-          <Button
-            variant="secondary"
-            className="h-11 w-full bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-semibold"
-            onClick={() => setShowMobileLogin(true)}
-          >
-            Iniciar sesión
-          </Button>
         </div>
       </div>
 
@@ -213,17 +211,14 @@ export default function LoginPage() {
           >
             <CardHeader className="space-y-1 pb-6 pt-7">
               <CardTitle className="text-2xl font-bold text-center">Iniciar Sesión</CardTitle>
-              <CardDescription className="text-center">
-                Ingresa tus credenciales para acceder al portal
-              </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Correo Electrónico</Label>
                   <Input
                     id="email"
                     type="email"
+                    aria-label="Correo Electrónico"
                     placeholder="tu@empresa.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -235,11 +230,11 @@ export default function LoginPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="password">Contraseña</Label>
                   <div className="relative">
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
+                      aria-label="Contraseña"
                       placeholder="********"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
