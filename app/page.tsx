@@ -177,13 +177,13 @@ export default function LoginPage() {
 
       {/* Right Panel - Login Form */}
       <div
-        className={`flex-1 items-start lg:items-center justify-center px-4 py-6 sm:px-6 lg:p-8 bg-background min-h-screen lg:min-h-0 ${
+        className={`flex-1 items-start lg:items-center justify-center px-4 pt-0 pb-4 sm:px-6 lg:p-8 bg-background min-h-screen lg:min-h-0 ${
           showMobileLogin ? "flex" : "hidden"
         } lg:flex`}
       >
         <div className="w-full max-w-md">
           {showMobileLogin && (
-            <div className="mb-4 rounded-xl bg-primary px-4 py-4 lg:hidden">
+            <div className="-mx-4 mb-3 bg-primary px-4 py-3 lg:hidden sm:mx-0 sm:rounded-xl">
               <Image
                 src="/logo.png"
                 alt="Global Express"
