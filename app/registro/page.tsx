@@ -15,6 +15,7 @@ export default function RegistroPage() {
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
+  const [phone, setPhone] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -52,6 +53,10 @@ export default function RegistroPage() {
     } else if (!/\S+@\S+\.\S+/.test(email)) {
       newErrors.email = "Ingresa un correo electrónico válido"
     }
+
+    if (!phone.trim()) {
+      newErrors.phone = "El teléfono es requerido"
+    }
     
     if (!password) {
       newErrors.password = "La contraseña es requerida"
@@ -78,7 +83,7 @@ export default function RegistroPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre: firstName, apellido: lastName, email, password }),
+        body: JSON.stringify({ nombre: firstName, apellido: lastName, email, telefono: phone, password }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -260,6 +265,21 @@ export default function RegistroPage() {
                   />
                   {errors.email && (
                     <p className="text-destructive text-xs">{errors.email}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone">WhatsApp / Teléfono</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="+57 300 123 4567"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className={errors.phone ? "border-destructive" : ""}
+                  />
+                  {errors.phone && (
+                    <p className="text-destructive text-xs">{errors.phone}</p>
                   )}
                 </div>
                 

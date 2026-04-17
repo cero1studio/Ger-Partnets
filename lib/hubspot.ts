@@ -23,16 +23,15 @@ export const STAGE_MAP: Record<string, string> = {
   "1062656365":          "Lead perdido",
 }
 
-const DEAL_PROPS = [
-  "dealname", "dealstage", "pipeline", "etiqueta_aliado",
-  "hubspot_owner_id", "createdate", "closedate",
-  "amount", "description",
-].join(",")
-
 const CONTACT_PROPS = [
   "firstname", "lastname", "email", "phone", "mobilephone",
-  "city", "country",
+  "city", "country", "createdate", "hubspot_owner_id", "jobtitle", "company",
 ].join(",")
+
+const CONTACT_STAGE_DEFAULT = "appointmentscheduled"
+const ALLY_TAG_PREFIX = "GER_TAG:"
+const PROFILE_PROP = "perfil_aliado"
+let contactPropertiesPromise: Promise<Set<string>> | null = null
 
 // ─── Helpers ──────────────────────────────────────────────
 
@@ -74,138 +73,83 @@ async function hsPatch(path: string, body: unknown) {
   return res.json()
 }
 
+async function getContactPropertyNames(): Promise<Set<string>> {
+  if (!contactPropertiesPromise) {
+    contactPropertiesPromise = hsGet("/crm/v3/properties/contacts")
+      .then((data) => new Set((data.results ?? []).map((p: { name: string }) => p.name)))
+      .catch(() => new Set<string>())
+  }
+  return contactPropertiesPromise
+}
+
 // ─── Owners ───────────────────────────────────────────────
 
 /**
  * Trae la información de los asesores (Dueños de los negocios)
  */
+type HubSpotOwner = {
+  id?: string | number
+  userId?: string | number
+  firstName?: string
+  lastName?: string
+  email?: string
+}
+
+async function getOwnerById(ownerId: string): Promise<HubSpotOwner | null> {
+  // `hubspot_owner_id` suele mapear al ID del owner, pero dejamos fallback
+  // porque en algunas cuentas el ID puede comportarse como userId.
+  const attempts = [
+    () => hsGet(`/crm/v3/owners/${ownerId}`, { idProperty: "id", archived: "true" }),
+    () => hsGet(`/crm/v3/owners/${ownerId}`, { idProperty: "userId", archived: "true" }),
+    () => hsGet(`/crm/v3/owners/${ownerId}`, { archived: "true" }),
+  ]
+
+  for (const request of attempts) {
+    try {
+      return await request()
+    } catch {
+      // Intentar siguiente estrategia
+    }
+  }
+
+  return null
+}
+
 async function getOwnersBatch(ids: string[]): Promise<Record<string, { nombre: string; email: string }>> {
   if (!ids.length) return {}
-  try {
-    const idsQuery = ids.map(id => `id=${id}`).join("&")
-    const data = await hsGet(`/crm/v3/owners/?${idsQuery}&limit=100`)
-    const result: Record<string, { nombre: string; email: string }> = {}
-    for (const owner of data.results ?? []) {
-      result[owner.id] = {
-        nombre: `${owner.firstName ?? ""} ${owner.lastName ?? ""}`.trim(),
-        email: owner.email ?? ""
-      }
+
+  const uniqueIds = [...new Set(ids)]
+  const owners = await Promise.all(uniqueIds.map(async (ownerId) => ({
+    ownerId,
+    data: await getOwnerById(ownerId),
+  })))
+
+  const result: Record<string, { nombre: string; email: string }> = {}
+
+  for (const { ownerId, data } of owners) {
+    if (!data) continue
+
+    const normalizedName = `${data.firstName ?? ""} ${data.lastName ?? ""}`.trim() || `Owner ${ownerId}`
+    const normalizedOwner = {
+      nombre: normalizedName,
+      email: data.email ?? "",
     }
-    return result
-  } catch (err) {
-    console.error("[getOwnersBatch] Error:", err)
-    return {}
+
+    // Guardamos por todas las claves posibles para resolver referencias futuras.
+    result[ownerId] = normalizedOwner
+    if (data.id !== undefined) result[String(data.id)] = normalizedOwner
+    if (data.userId !== undefined) result[String(data.userId)] = normalizedOwner
   }
+
+  return result
 }
 
 // ─── Contactos ────────────────────────────────────────────
 
-async function getContactsBatch(ids: string[]): Promise<Record<string, Record<string, string>>> {
-  if (!ids.length) return {}
-  const data = await hsPost("/crm/v3/objects/contacts/batch/read", {
-    inputs: ids.map(id => ({ id })),
-    properties: CONTACT_PROPS.split(","),
-  })
-  const result: Record<string, Record<string, string>> = {}
-  for (const c of data.results ?? []) result[c.id] = c.properties
-  return result
-}
+// ─── Contactos por etiqueta de aliado ─────────────────────
 
-// ─── Deals por etiqueta de aliado ─────────────────────────
-
-export async function getDealsByTag(tagId: string) {
-  const data = await hsPost("/crm/v3/objects/deals/search", {
-    filterGroups: [{
-      filters: [{ propertyName: "etiqueta_aliado", operator: "EQ", value: tagId }],
-    }],
-    properties: DEAL_PROPS.split(","),
-    limit: 200,
-  })
-
-  const rawDeals = data.results ?? []
-  if (rawDeals.length === 0) return []
-
-  const dealIds = rawDeals.map((d: any) => d.id)
-
-  // Recuperar los deals de nuevo, pero ahora solicitando específicamente la asociación de contactos en batch
-  const dealsWithAssocData = await hsPost("/crm/v3/objects/deals/batch/read", {
-    inputs: dealIds.map((id: string) => ({ id })),
-    properties: DEAL_PROPS.split(","),
-    propertiesWithHistory: [],
-    // IMPORTANTE: Aquí pedimos las asociaciones a los contactos (HubSpot v3 soporta esto)
-    // Puede variar entre "contact" o "contacts", pasamos ambos por si acaso
-    // En las librerías viejas a veces no funciona, pero un query parametro seguro sí.
-  })
-
-  // Una manera más fiable en v3 de obtener asociaciones bulk de Deals a Contacts es con la API de asociaciones
-  const associationsRes = await fetch(`${BASE}/crm/v3/associations/deals/contacts/batch/read`, {
-    method: "POST",
-    headers: HEADS,
-    body: JSON.stringify({ inputs: dealIds.map((id: string) => ({ id })) }),
-    cache: "no-store"
-  }).then(r => r.json()).catch(() => ({ results: [] }))
-
-  // Construir mapa de dealId -> Array de contactIds
-  const dealToContacts: Record<string, string[]> = {}
-  for (const assoc of associationsRes.results ?? []) {
-    const dId = assoc.from?.id || assoc.fromId
-    const cIds = (assoc.to || []).map((t: any) => t.id || t.toId)
-    if (dId && cIds.length) {
-      dealToContacts[dId] = cIds
-    }
-  }
-
-  // Recopilar IDs de contacto únicos para traer su info
-  const contactIds = [...new Set(Object.values(dealToContacts).flat())] as string[]
-
-  // Recopilar IDs de owners únicos
-  const ownerIds = [...new Set(
-    rawDeals.map((d: { properties: Record<string, string> }) => d.properties.hubspot_owner_id).filter(Boolean)
-  )] as string[]
-
-  const [contactsMap, ownersMap] = await Promise.all([
-    getContactsBatch(contactIds),
-    getOwnersBatch(ownerIds)
-  ])
-
-  return rawDeals.map((d: {
-    id: string
-    properties: Record<string, string>
-  }) => {
-    const p = d.properties
-    // Encontrar el primer contacto asociado a este deal
-    const contactIdForThisDeal = dealToContacts[d.id]?.[0]
-    const contact = contactIdForThisDeal ? contactsMap[contactIdForThisDeal] : {}
-    const owner = p.hubspot_owner_id ? ownersMap[p.hubspot_owner_id] : null
-
-    return {
-      id: d.id,
-      nombre: p.dealname ?? `${contact.firstname ?? ""} ${contact.lastname ?? ""}`.trim(),
-      email: contact.email || extractFromNotes(p.description, "[Email de Respaldo]"),
-      telefono: contact.phone || contact.mobilephone || extractFromNotes(p.description, "[Teléfono de Respaldo]"),
-      nacionalidad: contact.country || extractFromNotes(p.description, "Nacionalidad"),
-      etapa: p.dealstage ?? "",
-      stageLabel: STAGE_MAP[p.dealstage] ?? p.dealstage,
-      pipeline: p.pipeline ?? "default",
-      tagIds: p.etiqueta_aliado ?? "",
-      ownerHubspotId: p.hubspot_owner_id ?? "",
-      owner: owner && owner.nombre ? { nombre: owner.nombre, email: owner.email } : null,
-      fechaRegistro: p.createdate ? new Date(p.createdate).toLocaleDateString("es-CO") : "",
-      fechaCierre: p.closedate ?? null,
-      monto: p.amount ?? null,
-      notas: p.description ? cleanBackupNotes(p.description) : "",
-      contactId: contactIdForThisDeal ?? null,
-    }
-  })
-}
-
-// ─── Helpers ──────────────────────────────────────────────
-
-function extractFromNotes(description: string | undefined, key: string): string {
-  if (!description) return ""
-  const match = description.split("\n").find(line => line.startsWith(key))
-  if (match) return match.split(":")[1]?.trim() || ""
-  return ""
+function allyTagValue(tagId: string) {
+  return `${ALLY_TAG_PREFIX}${tagId}`
 }
 
 function cleanBackupNotes(description: string): string {
@@ -213,85 +157,259 @@ function cleanBackupNotes(description: string): string {
     .split("\n")
     .filter(line => !line.startsWith("[Email de Respaldo]") && !line.startsWith("[Teléfono de Respaldo]"))
     .join("\n")
+    .trim()
 }
 
-// ─── Crear deal + contacto ────────────────────────────────
+export async function getContactsByTag(tagId: string) {
+  const data = await hsPost("/crm/v3/objects/contacts/search", {
+    filterGroups: [{
+      filters: [{ propertyName: "company", operator: "EQ", value: allyTagValue(tagId) }],
+    }],
+    properties: [...CONTACT_PROPS.split(","), PROFILE_PROP],
+    limit: 200,
+    sorts: [{ propertyName: "createdate", direction: "DESCENDING" }],
+  }).catch(async () => hsPost("/crm/v3/objects/contacts/search", {
+    filterGroups: [{
+      filters: [{ propertyName: "company", operator: "EQ", value: allyTagValue(tagId) }],
+    }],
+    properties: CONTACT_PROPS.split(","),
+    limit: 200,
+    sorts: [{ propertyName: "createdate", direction: "DESCENDING" }],
+  }))
 
-export async function createDeal(params: {
+  const contacts = data.results ?? []
+  if (contacts.length === 0) return []
+
+  const ownerIds = [...new Set(
+    contacts.map((c: { properties: Record<string, string> }) => c.properties.hubspot_owner_id).filter(Boolean)
+  )] as string[]
+
+  const ownersMap = await getOwnersBatch(ownerIds)
+  const notesMap = await getLatestProfileNotesByContact(contacts.map((c: { id: string }) => c.id))
+
+  return contacts.map((c: { id: string; properties: Record<string, string> }) => {
+    const p = c.properties ?? {}
+    const owner = p.hubspot_owner_id ? ownersMap[p.hubspot_owner_id] : null
+    const nombre = `${p.firstname ?? ""} ${p.lastname ?? ""}`.trim() || p.email || "Sin nombre"
+
+    return {
+      id: c.id,
+      nombre,
+      email: p.email ?? "",
+      telefono: p.phone || p.mobilephone || "",
+      nacionalidad: p.country ?? "",
+      etapa: CONTACT_STAGE_DEFAULT,
+      stageLabel: STAGE_MAP[CONTACT_STAGE_DEFAULT] ?? "Contacto inicial",
+      ownerHubspotId: p.hubspot_owner_id ?? "",
+      owner: owner && owner.nombre ? { nombre: owner.nombre, email: owner.email } : null,
+      fechaRegistro: p.createdate ? new Date(p.createdate).toLocaleDateString("es-CO") : "",
+      notas: cleanBackupNotes(p[PROFILE_PROP] ?? notesMap[c.id] ?? ""),
+      contactId: c.id,
+    }
+  })
+}
+
+// ─── Helpers ──────────────────────────────────────────────
+
+async function ensureContactProfileProperty(): Promise<boolean> {
+  try {
+    await hsPost("/crm/v3/properties/contacts", {
+      name: PROFILE_PROP,
+      label: "Perfil aliado",
+      type: "string",
+      fieldType: "textarea",
+      groupName: "contactinformation",
+      description: "Perfilamiento capturado desde el portal de aliados.",
+      hidden: false,
+      hasUniqueValue: false,
+    })
+    return true
+  } catch (err) {
+    const message = (err as Error).message
+    // Si ya existe, seguimos normal.
+    if (message.includes("409")) return true
+    return false
+  }
+}
+
+async function upsertContactNote(contactId: string, noteBody: string) {
+  if (!noteBody.trim()) return
+  await hsPost("/crm/v3/objects/notes", {
+    properties: {
+      hs_timestamp: new Date().toISOString(),
+      hs_note_body: noteBody,
+    },
+    associations: [
+      {
+        to: { id: contactId },
+        types: [
+          {
+            associationCategory: "HUBSPOT_DEFINED",
+            associationTypeId: 202,
+          },
+        ],
+      },
+    ],
+  })
+}
+
+function isProfileNote(noteBody: string): boolean {
+  return [
+    "Nacionalidad:",
+    "Programa:",
+    "Profesión:",
+    "Escolaridad:",
+    "Tuvo visa:",
+    "Cubre costos",
+    "Notas:",
+  ].some(marker => noteBody.includes(marker))
+}
+
+async function getLatestProfileNotesByContact(contactIds: string[]): Promise<Record<string, string>> {
+  if (!contactIds.length) return {}
+
+  try {
+    const associations = await hsPost("/crm/v3/associations/contacts/notes/batch/read", {
+      inputs: contactIds.map(id => ({ id })),
+    })
+
+    const contactToNoteIds: Record<string, string[]> = {}
+    const allNoteIds = new Set<string>()
+
+    for (const row of associations.results ?? []) {
+      const contactId = String(row.from?.id ?? row.fromId ?? "")
+      if (!contactId) continue
+      const noteIds = (row.to ?? [])
+        .map((n: { id?: string | number; toId?: string | number }) => String(n.id ?? n.toId ?? ""))
+        .filter(Boolean)
+
+      if (!noteIds.length) continue
+      contactToNoteIds[contactId] = noteIds
+      for (const noteId of noteIds) allNoteIds.add(noteId)
+    }
+
+    if (!allNoteIds.size) return {}
+
+    const notesBatch = await hsPost("/crm/v3/objects/notes/batch/read", {
+      inputs: [...allNoteIds].map(id => ({ id })),
+      properties: ["hs_note_body", "hs_timestamp"],
+    })
+
+    const notesById: Record<string, { body: string; ts: number }> = {}
+    for (const note of notesBatch.results ?? []) {
+      const body = String(note.properties?.hs_note_body ?? "")
+      const ts = Date.parse(String(note.properties?.hs_timestamp ?? "")) || 0
+      notesById[String(note.id)] = { body, ts }
+    }
+
+    const latestByContact: Record<string, string> = {}
+    for (const contactId of Object.keys(contactToNoteIds)) {
+      const notes = contactToNoteIds[contactId].map(noteId => notesById[noteId]).filter(Boolean)
+      if (!notes.length) continue
+      const profileNotes = notes.filter(n => isProfileNote(n.body))
+      const source = profileNotes.length ? profileNotes : notes
+      source.sort((a, b) => b.ts - a.ts)
+      latestByContact[contactId] = cleanBackupNotes(source[0].body)
+    }
+
+    return latestByContact
+  } catch {
+    return {}
+  }
+}
+
+// ─── Crear/actualizar contacto únicamente ─────────────────
+
+export async function createContact(params: {
   nombre: string
   apellido: string
   email: string
   telefono: string
   nacionalidad?: string
   programa?: string
-  tagId: string          // hs_tag_ids del aliado
+  tuvoVisa?: boolean
+  tipoVisa?: string
+  puedeCubrirCostos?: string
+  profesion?: string
+  nivelEscolaridad?: string
+  tagId: string
   notas?: string
 }) {
-  // 1. Crear o actualizar contacto
   let contactId: string | null = null
+  const profileDescription = cleanBackupNotes(params.notas ?? "")
+  const profilePropertyReady = profileDescription ? await ensureContactProfileProperty() : false
+  const contactPropertyNames = await getContactPropertyNames()
+
+  const properties: Record<string, string> = {
+    firstname: params.nombre,
+    lastname: params.apellido,
+    email: params.email.toLowerCase(),
+    phone: params.telefono,
+    country: params.nacionalidad ?? "",
+    company: allyTagValue(params.tagId),
+  }
+
+  if (params.profesion) properties.jobtitle = params.profesion
+
+  // Guardar en propiedades custom SOLO si existen en este portal de HubSpot.
+  if (params.nacionalidad && contactPropertyNames.has("nacionalidad")) properties.nacionalidad = params.nacionalidad
+  if (params.programa && contactPropertyNames.has("programa")) properties.programa = params.programa
+  if (params.profesion && contactPropertyNames.has("profesion")) properties.profesion = params.profesion
+  if (params.nivelEscolaridad && contactPropertyNames.has("nivel_escolaridad")) properties.nivel_escolaridad = params.nivelEscolaridad
+  if (params.tipoVisa && contactPropertyNames.has("tipo_visa")) properties.tipo_visa = params.tipoVisa
+  if (params.tuvoVisa !== undefined && contactPropertyNames.has("tuvo_visa")) properties.tuvo_visa = params.tuvoVisa ? "true" : "false"
+  if (params.puedeCubrirCostos && contactPropertyNames.has("puede_cubrir_costos")) properties.puede_cubrir_costos = params.puedeCubrirCostos
+
+  if (profilePropertyReady && profileDescription) properties[PROFILE_PROP] = profileDescription
+
   try {
     const contactData = await hsPost("/crm/v3/objects/contacts", {
-      properties: {
-        firstname: params.nombre,
-        lastname:  params.apellido,
-        email:     params.email,
-        phone:     params.telefono,
-        country:   params.nacionalidad ?? "",
-      },
+      properties,
     })
     contactId = contactData.id
   } catch (err) {
-    console.log("[createDeal] Falla al crear contacto nuevo (quizás ya existe):", (err as Error).message)
-    // Si ya existe por email, buscarlo
+    console.log("[createContact] Falla al crear contacto nuevo (quizás ya existe):", (err as Error).message)
     try {
-      // Usamos el endpoint de busqueda viejo que suele requerir menos scopes o usamos el endpoint de busqueda nuevo con permisos básicos
       const search = await hsPost("/crm/v3/objects/contacts/search", {
         filterGroups: [{
-          filters: [{ propertyName: "email", operator: "EQ", value: params.email }],
+          filters: [{ propertyName: "email", operator: "EQ", value: params.email.toLowerCase() }],
         }],
         properties: ["email"],
         limit: 1,
       })
       if (search.results && search.results.length > 0) {
         contactId = search.results[0].id
-        console.log(`[createDeal] Contacto existente encontrado: ${contactId}`)
+        await hsPatch(`/crm/v3/objects/contacts/${contactId}`, { properties })
+        console.log(`[createContact] Contacto existente actualizado: ${contactId}`)
       }
     } catch (searchErr) {
-      console.error("[createDeal] No se pudo buscar el contacto existente:", (searchErr as Error).message)
+      console.error("[createContact] No se pudo buscar el contacto existente:", (searchErr as Error).message)
     }
   }
 
-  // 2. Crear deal primero (SIN asociaciones inicialmente)
-  const dealBody: { properties: Record<string, string> } = {
-    properties: {
-      dealname:   `${params.nombre} ${params.apellido}`.trim(),
-      dealstage:  "appointmentscheduled",
-      pipeline:   "default",
-      etiqueta_aliado: params.tagId,
-      description: params.notas ?? "",
+  if (!contactId) {
+    throw new Error("No fue posible crear ni actualizar el contacto en HubSpot")
+  }
+
+  // Si no fue posible usar propiedad, guardamos el perfil como nota asociada.
+  if (profileDescription && !profilePropertyReady) {
+    await upsertContactNote(contactId, profileDescription)
+  }
+
+  return {
+    contactId,
+    lead: {
+      id: contactId,
+      nombre: `${params.nombre} ${params.apellido}`.trim(),
+      email: params.email.toLowerCase(),
+      telefono: params.telefono,
+      nacionalidad: params.nacionalidad ?? "",
+      etapa: CONTACT_STAGE_DEFAULT,
+      stageLabel: STAGE_MAP[CONTACT_STAGE_DEFAULT] ?? "Contacto inicial",
+      fechaRegistro: new Date().toLocaleDateString("es-CO"),
+      notas: profileDescription,
+      contactId,
+      owner: null,
     },
   }
-
-  const deal = await hsPost("/crm/v3/objects/deals", dealBody)
-
-  // 3. Asociar Deal a Contacto (usando el endpoint nativo de asociaciones v4)
-  if (contactId && deal.id) {
-    try {
-      await fetch(`${BASE}/crm/v4/objects/deals/${deal.id}/associations/contacts/${contactId}`, {
-        method: "PUT",
-        headers: HEADS,
-        body: JSON.stringify([
-          {
-            associationCategory: "HUBSPOT_DEFINED",
-            associationTypeId: 3 // deal_to_contact
-          }
-        ])
-      })
-      console.log(`[createDeal] Deal ${deal.id} asociado exitosamente al Contacto ${contactId}`)
-    } catch (assocErr) {
-      console.error("[createDeal] Falla menor al asociar (ya guardamos la data en las notas):", assocErr)
-    }
-  }
-
-  return { dealId: deal.id, contactId }
 }

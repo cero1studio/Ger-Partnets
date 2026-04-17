@@ -6,6 +6,7 @@ export interface IUser extends Document {
   nombre: string
   apellido: string
   email: string
+  telefono?: string
   password: string
   etiqueta: string
   hubspotTagId?: string
@@ -20,6 +21,7 @@ const UserSchema = new Schema<IUser>(
     nombre:        { type: String, required: true, trim: true },
     apellido:      { type: String, required: true, trim: true },
     email:         { type: String, required: true, unique: true, lowercase: true, trim: true },
+    telefono:      { type: String, trim: true, default: "" },
     password:      { type: String, required: true },
     etiqueta:      { type: String, required: true, unique: true, lowercase: true, trim: true },
     hubspotTagId:  { type: String, default: null },

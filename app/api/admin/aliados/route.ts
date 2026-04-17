@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { nombre, apellido, email, password } = await req.json()
+    const { nombre, apellido, email, telefono, password } = await req.json()
 
     if (!nombre || !apellido || !email || !password) {
       return NextResponse.json({ error: "Todos los campos son requeridos" }, { status: 400 })
@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
       nombre,
       apellido,
       email: email.toLowerCase(),
+      telefono: telefono ? String(telefono).trim() : "",
       password: hash,
       etiqueta,
       hubspotTagId: etiqueta,
@@ -74,6 +75,7 @@ export async function POST(req: NextRequest) {
         nombre: user.nombre,
         apellido: user.apellido,
         email: user.email,
+        telefono: user.telefono,
         etiqueta: user.etiqueta,
         activo: user.activo,
         createdAt: user.createdAt,
