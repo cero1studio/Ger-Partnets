@@ -76,8 +76,14 @@ export default function LoginPage() {
     },
   ]
 
+  const mobileHighlights = [
+    "Referidos en segundos",
+    "Estatus comercial en tiempo real",
+    "Control completo de aplicantes EB-3",
+  ]
+
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-slate-50/50">
       {/* Left Panel - Brand */}
       <div className="hidden lg:flex lg:w-1/2 bg-primary flex-col justify-between p-8 xl:p-12">
         <div className="flex items-center gap-3">
@@ -120,22 +126,60 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Right Panel - Login Form */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-8 bg-background min-h-screen lg:min-h-0">
-        <div className="w-full max-w-md">
-          {/* Mobile Logo */}
-          <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-            <Image 
-              src="/logo.png" 
-              alt="Global Express" 
-              width={48} 
-              height={48}
-              className="h-12 w-auto"
+      {/* Mobile Header */}
+      <div className="lg:hidden bg-primary px-5 pt-6 pb-10">
+        <div className="mx-auto w-full max-w-md space-y-5">
+          <div className="flex items-center gap-2.5">
+            <Image
+              src="/logo.png"
+              alt="Global Express"
+              width={40}
+              height={40}
+              className="h-10 w-auto"
             />
+            <span className="text-primary-foreground/95 font-semibold tracking-wide">
+              Global Express
+            </span>
           </div>
 
-          <Card className="border-0 shadow-xl">
-            <CardHeader className="space-y-1 pb-6">
+          <div className="space-y-2.5">
+            <h1 className="text-[1.7rem] leading-tight font-bold text-primary-foreground text-balance">
+              Portal de Aliados Estratégicos
+            </h1>
+            <p className="text-sm leading-relaxed text-primary-foreground/85">
+              Gestiona tus referidos y accede a herramientas exclusivas desde cualquier dispositivo.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {mobileHighlights.map((highlight) => (
+              <span
+                key={highlight}
+                className="inline-flex items-center rounded-full border border-primary-foreground/25 bg-primary-foreground/10 px-3 py-1.5 text-xs text-primary-foreground/95"
+              >
+                {highlight}
+              </span>
+            ))}
+          </div>
+
+          <Button
+            asChild
+            variant="secondary"
+            className="h-11 w-full bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-semibold"
+          >
+            <Link href="#login-form">Iniciar sesión</Link>
+          </Button>
+        </div>
+      </div>
+
+      {/* Right Panel - Login Form */}
+      <div className="flex-1 flex items-start lg:items-center justify-center px-4 pb-6 -mt-5 lg:mt-0 sm:px-6 lg:p-8 bg-background">
+        <div className="w-full max-w-md">
+          <Card
+            id="login-form"
+            className="border border-border/60 shadow-2xl shadow-primary/10 rounded-2xl scroll-mt-6"
+          >
+            <CardHeader className="space-y-1 pb-6 pt-7">
               <CardTitle className="text-2xl font-bold text-center">Iniciar Sesión</CardTitle>
               <CardDescription className="text-center">
                 Ingresa tus credenciales para acceder al portal
@@ -151,7 +195,7 @@ export default function LoginPage() {
                     placeholder="tu@empresa.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className={errors.email ? "border-destructive" : ""}
+                    className={errors.email ? "h-11 border-destructive" : "h-11"}
                   />
                   {errors.email && (
                     <p className="text-destructive text-sm">{errors.email}</p>
@@ -167,7 +211,7 @@ export default function LoginPage() {
                       placeholder="********"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className={errors.password ? "border-destructive pr-10" : "pr-10"}
+                      className={errors.password ? "h-11 border-destructive pr-10" : "h-11 pr-10"}
                     />
                     <button
                       type="button"
@@ -194,7 +238,7 @@ export default function LoginPage() {
 
                 <Button
                   type="submit"
-                  className="w-full h-11"
+                  className="w-full h-11 font-semibold"
                   disabled={isLoading}
                 >
                   {isLoading ? (
@@ -219,7 +263,7 @@ export default function LoginPage() {
             </CardContent>
           </Card>
 
-          <p className="text-center text-xs text-muted-foreground mt-6">
+          <p className="mx-auto mt-5 max-w-sm text-center text-xs text-muted-foreground">
             Al iniciar sesión, aceptas nuestros términos de servicio y política de privacidad.
           </p>
         </div>
