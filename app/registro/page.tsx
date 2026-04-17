@@ -189,16 +189,16 @@ export default function RegistroPage() {
       </div>
 
       {/* Right Panel - Registration Form */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-8 bg-background min-h-screen lg:min-h-0">
+      <div className="flex-1 flex items-start lg:items-center justify-center px-4 pt-0 pb-4 sm:px-6 lg:p-8 bg-background min-h-screen lg:min-h-0">
         <div className="w-full max-w-md">
-          {/* Mobile Logo */}
-          <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
+          {/* Mobile Header */}
+          <div className="-mx-4 mb-3 bg-primary px-4 py-3 lg:hidden sm:mx-0 sm:rounded-xl">
             <Image 
               src="/logo.png" 
               alt="Global Express" 
-              width={48} 
-              height={48}
-              className="h-12 w-auto"
+              width={44} 
+              height={44}
+              className="mx-auto h-11 w-auto"
             />
           </div>
 
