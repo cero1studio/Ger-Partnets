@@ -122,23 +122,23 @@ export default function LoginPage() {
 
       {/* Mobile Fullscreen Hero */}
       <div
-        className={`lg:hidden bg-primary min-h-screen px-5 py-8 flex items-center ${
+        className={`lg:hidden bg-primary min-h-screen px-5 py-6 flex items-center ${
           showMobileLogin ? "hidden" : "flex"
         }`}
       >
         <div className="mx-auto w-full max-w-md min-h-[calc(100dvh-4rem)] flex flex-col">
-          <div className="flex justify-center pt-2">
+          <div className="flex justify-center pt-0">
             <Image
               src="/logo.png"
               alt="Global Express"
-              width={64}
-              height={64}
-              className="h-16 w-auto"
+              width={48}
+              height={48}
+              className="h-12 w-auto"
             />
           </div>
 
           <div className="mt-10 space-y-5">
-            <h1 className="text-[1.9rem] leading-tight font-bold text-primary-foreground text-balance">
+            <h1 className="text-[1.6rem] leading-tight font-bold text-primary-foreground text-balance">
               Portal de Aliados Estratégicos
             </h1>
             <p className="text-base leading-relaxed text-primary-foreground/85">
