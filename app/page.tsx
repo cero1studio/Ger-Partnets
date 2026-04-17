@@ -17,6 +17,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({})
+  const [showMobileLogin, setShowMobileLogin] = useState(false)
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {}
@@ -126,9 +127,13 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Mobile Header */}
-      <div className="lg:hidden bg-primary px-5 pt-6 pb-10">
-        <div className="mx-auto w-full max-w-md space-y-5">
+      {/* Mobile Fullscreen Hero */}
+      <div
+        className={`lg:hidden bg-primary min-h-screen px-5 py-8 flex items-center ${
+          showMobileLogin ? "hidden" : "flex"
+        }`}
+      >
+        <div className="mx-auto w-full max-w-md space-y-6">
           <div className="flex items-center gap-2.5">
             <Image
               src="/logo.png"
@@ -163,18 +168,45 @@ export default function LoginPage() {
           </div>
 
           <Button
-            asChild
             variant="secondary"
             className="h-11 w-full bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-semibold"
+            onClick={() => setShowMobileLogin(true)}
           >
-            <Link href="#login-form">Iniciar sesión</Link>
+            Iniciar sesión
           </Button>
         </div>
       </div>
 
       {/* Right Panel - Login Form */}
-      <div className="flex-1 flex items-start lg:items-center justify-center px-4 pb-6 -mt-5 lg:mt-0 sm:px-6 lg:p-8 bg-background">
+      <div
+        className={`flex-1 items-start lg:items-center justify-center px-4 py-6 sm:px-6 lg:p-8 bg-background min-h-screen lg:min-h-0 ${
+          showMobileLogin ? "flex" : "hidden"
+        } lg:flex`}
+      >
         <div className="w-full max-w-md">
+          {showMobileLogin && (
+            <div className="mb-4 rounded-xl bg-primary px-4 py-4 lg:hidden">
+              <Image
+                src="/logo.png"
+                alt="Global Express"
+                width={44}
+                height={44}
+                className="mx-auto h-11 w-auto"
+              />
+            </div>
+          )}
+
+          {showMobileLogin && (
+            <Button
+              type="button"
+              variant="ghost"
+              className="mb-3 px-1 text-sm lg:hidden"
+              onClick={() => setShowMobileLogin(false)}
+            >
+              Volver
+            </Button>
+          )}
+
           <Card
             id="login-form"
             className="border border-border/60 shadow-2xl shadow-primary/10 rounded-2xl scroll-mt-6"
