@@ -258,9 +258,9 @@ export default function LoginPage() {
                 </div>
 
                 <div className="flex items-center justify-end">
-                  <p className="text-xs text-muted-foreground">
-                    ¿Olvidaste tu contraseña? Contacta al administrador para restablecerla.
-                  </p>
+                  <Link href="/olvido-contrasena" className="text-xs text-primary hover:underline font-medium">
+                    ¿Olvidaste tu contraseña?
+                  </Link>
                 </div>
 
                 <Button

@@ -296,6 +296,31 @@ export async function getContactsByTag(tagId: string) {
   })
 }
 
+export async function getAllLeadsCountsByAlly(): Promise<Record<string, number>> {
+  try {
+    const data = await hsPost("/crm/v3/objects/contacts/search", {
+      filterGroups: [{
+        filters: [{ propertyName: "company", operator: "CONTAINS_TOKEN", value: ALLY_TAG_PREFIX }],
+      }],
+      properties: ["company"],
+      limit: 1000,
+    })
+
+    const counts: Record<string, number> = {}
+    for (const res of data.results ?? []) {
+      const company = res.properties?.company || ""
+      if (company.startsWith(ALLY_TAG_PREFIX)) {
+        const tagId = company.replace(ALLY_TAG_PREFIX, "")
+        counts[tagId] = (counts[tagId] || 0) + 1
+      }
+    }
+    return counts
+  } catch (err) {
+    console.error("[HubSpot] Error fetching all lead counts:", err)
+    return {}
+  }
+}
+
 // ─── Helpers ──────────────────────────────────────────────
 
 async function ensureContactProfileProperty(): Promise<boolean> {

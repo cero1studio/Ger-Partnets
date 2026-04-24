@@ -14,7 +14,11 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Eye, EyeOff, Plus, Lock, Unlock, KeyRound, Users, UserCheck, UserX, Tag, Search } from "lucide-react"
+import { 
+  Eye, EyeOff, Plus, Lock, Unlock, KeyRound, Users, UserCheck, 
+  UserX, Tag, Search, Mail, Send, Check, Loader2, Info
+} from "lucide-react"
+import Image from "next/image"
 
 type Aliado = {
   _id: string
@@ -24,6 +28,7 @@ type Aliado = {
   etiqueta: string
   activo: boolean
   createdAt: string
+  leadCount?: number
 }
 
 export default function AdminPage() {
@@ -31,7 +36,13 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
 
-  // Modal crear
+  // Modal invitar
+  const [showInvite, setShowInvite] = useState(false)
+  const [inviting, setInviting] = useState(false)
+  const [inviteForm, setInviteForm] = useState({ nombre: "", email: "" })
+  const [inviteSent, setInviteSent] = useState(false)
+
+  // Modal crear directo
   const [showCreate, setShowCreate] = useState(false)
   const [creating, setCreating] = useState(false)
   const [createForm, setCreateForm] = useState({ nombre: "", apellido: "", email: "", password: "" })
@@ -61,24 +72,32 @@ export default function AdminPage() {
 
   useEffect(() => { fetchAliados() }, [fetchAliados])
 
-  // ── Filtro local ───────────────────────────────────────────
-  const filtered = aliados.filter(a => {
-    const q = search.toLowerCase()
-    return (
-      a.nombre.toLowerCase().includes(q) ||
-      a.apellido.toLowerCase().includes(q) ||
-      a.email.toLowerCase().includes(q) ||
-      a.etiqueta.toLowerCase().includes(q)
-    )
-  })
-
-  const stats = {
-    total: aliados.length,
-    activos: aliados.filter(a => a.activo).length,
-    bloqueados: aliados.filter(a => !a.activo).length,
+  // ── Enviar invitación ──────────────────────────────────────
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!inviteForm.nombre || !inviteForm.email) return
+    setInviting(true)
+    try {
+      const res = await fetch("/api/admin/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(inviteForm),
+      })
+      if (res.ok) {
+        setInviteSent(true)
+        setTimeout(() => {
+          setShowInvite(false)
+          setInviteSent(false)
+          setInviteForm({ nombre: "", email: "" })
+        }, 2000)
+      }
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setInviting(false)
+    }
   }
 
-  // ── Crear aliado ───────────────────────────────────────────
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     setCreateError("")
@@ -102,7 +121,6 @@ export default function AdminPage() {
     finally { setCreating(false) }
   }
 
-  // ── Cambiar contraseña ─────────────────────────────────────
   const handlePwdSave = async () => {
     setPwdError("")
     if (!newPwd || newPwd.length < 6) { setPwdError("Mínimo 6 caracteres"); return }
@@ -121,7 +139,6 @@ export default function AdminPage() {
     finally { setSavingPwd(false) }
   }
 
-  // ── Bloquear/Desbloquear ───────────────────────────────────
   const handleToggle = async () => {
     if (!toggleTarget) return
     setToggling(true)
@@ -142,189 +159,260 @@ export default function AdminPage() {
     }
   }
 
+  const filtered = aliados.filter(a => {
+    const q = search.toLowerCase()
+    return (
+      a.nombre.toLowerCase().includes(q) ||
+      a.apellido.toLowerCase().includes(q) ||
+      a.email.toLowerCase().includes(q) ||
+      a.etiqueta.toLowerCase().includes(q)
+    )
+  })
+
   return (
     <div className="space-y-6">
       {/* Encabezado */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Gestión de Aliados</h1>
-          <p className="text-muted-foreground text-sm mt-1">Administra los referidores registrados en la plataforma</p>
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">Gestión de Aliados</h1>
+          <p className="text-muted-foreground text-sm mt-1">Administra e invita a nuevos socios estratégicos</p>
         </div>
-        <Button onClick={() => setShowCreate(true)} className="w-full sm:w-auto">
-          <Plus className="w-4 h-4 mr-2" />
-          Nuevo Aliado
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setShowInvite(true)} variant="default" className="shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 font-bold">
+            <Mail className="w-4 h-4 mr-2" />
+            Invitar Aliado
+          </Button>
+          <Button onClick={() => setShowCreate(true)} variant="outline">
+            <Plus className="w-4 h-4 mr-2" />
+            Crear Directo
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="border-border/50">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
-              <Users className="w-5 h-5 text-primary" />
+            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0 text-primary">
+              <Users className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{stats.total}</p>
-              <p className="text-xs text-muted-foreground">Total aliados</p>
+              <p className="text-2xl font-bold leading-none">{aliados.length}</p>
+              <p className="text-[10px] uppercase font-bold text-muted-foreground mt-1 tracking-wider">Total</p>
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-border/50">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center shrink-0">
-              <UserCheck className="w-5 h-5 text-green-600" />
+            <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center shrink-0 text-green-600">
+              <UserCheck className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-green-600">{stats.activos}</p>
-              <p className="text-xs text-muted-foreground">Activos</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center shrink-0">
-              <UserX className="w-5 h-5 text-red-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-red-500">{stats.bloqueados}</p>
-              <p className="text-xs text-muted-foreground">Bloqueados</p>
+              <p className="text-2xl font-bold leading-none text-green-600">{aliados.filter(a => a.activo).length}</p>
+              <p className="text-[10px] uppercase font-bold text-muted-foreground mt-1 tracking-wider">Activos</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Tabla */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nombre, email o @usuario..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
+      <Card className="border-border/50 overflow-hidden">
+        <CardHeader className="bg-muted/30 pb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nombre, email o etiqueta..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-9 bg-background"
+            />
           </div>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
-              <span className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin mr-2" />
-              Cargando...
+            <div className="flex items-center justify-center py-20 text-muted-foreground">
+              <Loader2 className="w-6 h-6 animate-spin mr-3 opacity-20" />
+              <span className="text-sm font-medium">Cargando aliados...</span>
             </div>
           ) : filtered.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground">
-              <Users className="w-10 h-10 mx-auto mb-3 opacity-30" />
-              <p className="text-sm">{search ? "Sin resultados" : "No hay aliados registrados aún"}</p>
+            <div className="text-center py-20">
+              <Users className="w-12 h-12 mx-auto mb-4 opacity-10 text-primary" />
+              <p className="text-muted-foreground font-medium">No se encontraron aliados</p>
             </div>
           ) : (
-            <div className="divide-y">
-              {filtered.map(aliado => (
-                <div key={aliado._id} className="flex items-center gap-4 px-6 py-4 hover:bg-muted/30 transition-colors">
-                  <Avatar className="w-10 h-10 shrink-0">
-                    <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">
-                      {aliado.nombre[0]}{aliado.apellido[0]}
-                    </AvatarFallback>
-                  </Avatar>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium text-foreground">{aliado.nombre} {aliado.apellido}</p>
-                      <Badge
-                        variant={aliado.activo ? "default" : "secondary"}
-                        className={aliado.activo
-                          ? "bg-green-100 text-green-700 border-green-200 hover:bg-green-100"
-                          : "bg-red-100 text-red-600 border-red-200 hover:bg-red-100"
-                        }
-                      >
-                        {aliado.activo ? "Activo" : "Bloqueado"}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground truncate">{aliado.email}</p>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <Tag className="w-3 h-3 text-primary" />
-                      <span className="text-xs font-medium text-primary">@{aliado.etiqueta}</span>
-                    </div>
-                  </div>
-
-                  <div className="text-xs text-muted-foreground hidden md:block shrink-0">
-                    {new Date(aliado.createdAt).toLocaleDateString("es-CO", {
-                      day: "numeric", month: "short", year: "numeric"
-                    })}
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => { setPwdTarget(aliado); setNewPwd(""); setPwdError("") }}
-                      title="Cambiar contraseña"
-                    >
-                      <KeyRound className="w-4 h-4 sm:mr-1.5" />
-                      <span className="hidden sm:inline">Contraseña</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setToggleTarget(aliado)}
-                      className={aliado.activo
-                        ? "text-red-500 hover:text-red-600 hover:border-red-300"
-                        : "text-green-600 hover:text-green-700 hover:border-green-300"
-                      }
-                      title={aliado.activo ? "Bloquear" : "Desbloquear"}
-                    >
-                      {aliado.activo
-                        ? <><Lock className="w-4 h-4 sm:mr-1.5" /><span className="hidden sm:inline">Bloquear</span></>
-                        : <><Unlock className="w-4 h-4 sm:mr-1.5" /><span className="hidden sm:inline">Activar</span></>
-                      }
-                    </Button>
-                  </div>
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/30 text-muted-foreground font-medium border-b border-border/50">
+                  <tr>
+                    <th className="px-6 py-3 text-left">Aliado</th>
+                    <th className="px-6 py-3 text-left hidden sm:table-cell">Etiqueta</th>
+                    <th className="px-6 py-3 text-center">Leads</th>
+                    <th className="px-6 py-3 text-left">Estado</th>
+                    <th className="px-6 py-3 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50">
+                  {filtered.map(aliado => (
+                    <tr key={aliado._id} className="hover:bg-muted/20 transition-colors group">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="w-9 h-9 border border-border">
+                            <AvatarFallback className="bg-primary/5 text-primary text-xs font-bold uppercase">
+                              {aliado.nombre[0]}{aliado.apellido[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <p className="font-bold text-foreground truncate">{aliado.nombre} {aliado.apellido}</p>
+                            <p className="text-[11px] text-muted-foreground truncate">{aliado.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 hidden sm:table-cell">
+                        <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 font-bold text-[10px]">
+                          @{aliado.etiqueta}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4 text-center font-bold text-primary">
+                        {aliado.leadCount || 0}
+                      </td>
+                      <td className="px-6 py-4">
+                        <Badge
+                          className={aliado.activo
+                            ? "bg-green-100 text-green-700 hover:bg-green-100 border-green-200"
+                            : "bg-red-100 text-red-600 hover:bg-red-100 border-red-200"
+                          }
+                        >
+                          {aliado.activo ? "Activo" : "Bloqueado"}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setPwdTarget(aliado)} title="Password">
+                            <KeyRound className="w-4 h-4 text-muted-foreground" />
+                          </Button>
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className={`h-8 w-8 ${aliado.activo ? 'text-red-400 hover:text-red-600' : 'text-green-400 hover:text-green-600'}`} 
+                            onClick={() => setToggleTarget(aliado)}
+                          >
+                            {aliado.activo ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* ── Modal: Crear Aliado ────────────────────────────── */}
+      {/* ── Modal: Invitar Aliado ──────────────────────────── */}
+      <Dialog open={showInvite} onOpenChange={setShowInvite}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Invitar Nuevo Aliado</DialogTitle>
+            <DialogDescription>
+              Envía una invitación personalizada. El aliado recibirá un link único para registrarse.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {inviteSent ? (
+            <div className="py-8 text-center space-y-4 animate-in fade-in zoom-in">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                <Check className="w-8 h-8 text-green-600" />
+              </div>
+              <div>
+                <p className="font-bold text-lg">¡Invitación Enviada!</p>
+                <p className="text-sm text-muted-foreground">Se ha enviado el correo a <span className="font-semibold">{inviteForm.email}</span></p>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleInvite} className="space-y-5 pt-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Nombre del Aliado</Label>
+                <Input 
+                  placeholder="Ej: Pedro Perez" 
+                  value={inviteForm.nombre}
+                  onChange={e => setInviteForm({ ...inviteForm, nombre: e.target.value })}
+                  required
+                  className="h-11"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Correo Electrónico</Label>
+                <Input 
+                  type="email" 
+                  placeholder="correo@ejemplo.com" 
+                  value={inviteForm.email}
+                  onChange={e => setInviteForm({ ...inviteForm, email: e.target.value })}
+                  required
+                  className="h-11"
+                />
+              </div>
+
+              {/* Preview */}
+              <div className="mt-6 p-4 rounded-2xl border border-muted bg-muted/10 space-y-3">
+                <div className="flex items-center gap-2 text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                  <Eye className="w-3 h-3" /> Preview del Correo
+                </div>
+                <div className="bg-white border rounded-xl p-5 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Image src="/logo.png" alt="GER" width={32} height={32} className="h-6 w-auto" />
+                    <div className="px-2 py-0.5 rounded bg-primary/10 text-[9px] font-bold text-primary uppercase">Invitación</div>
+                  </div>
+                  <p className="text-sm font-bold">¡Hola, {inviteForm.nombre || "..." }! 👋</p>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Has sido invitado a unirte a la familia Global Express. En esta plataforma generarás ingresos ayudando a otros a cumplir su sueño en USA...
+                  </p>
+                  <div className="h-8 w-full bg-primary rounded-lg flex items-center justify-center text-[10px] font-bold text-white shadow-lg shadow-primary/20">
+                    ACEPTAR INVITACIÓN
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter className="pt-4 gap-2">
+                <Button type="button" variant="ghost" onClick={() => setShowInvite(false)}>Cancelar</Button>
+                <Button type="submit" disabled={inviting} className="gap-2 h-11 px-8 font-bold">
+                  {inviting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  Enviar Invitación
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Modal: Crear Aliado Directo ────────────────────── */}
       <Dialog open={showCreate} onOpenChange={open => { setShowCreate(open); setCreateError("") }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Nuevo Aliado</DialogTitle>
-            <DialogDescription>Crea la cuenta de un nuevo referidor. Se creará su etiqueta en HubSpot automáticamente.</DialogDescription>
+            <DialogTitle>Nuevo Aliado (Registro Directo)</DialogTitle>
+            <DialogDescription>Usa esta opción solo si no deseas enviar invitación por correo.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Nombre *</Label>
+                <Label>Nombre</Label>
                 <Input placeholder="Juan" value={createForm.nombre}
                   onChange={e => setCreateForm({ ...createForm, nombre: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>Apellido *</Label>
+                <Label>Apellido</Label>
                 <Input placeholder="Pérez" value={createForm.apellido}
                   onChange={e => setCreateForm({ ...createForm, apellido: e.target.value })} />
               </div>
             </div>
 
-            {createForm.nombre && createForm.apellido && (
-              <div className="bg-primary/5 border border-primary/20 rounded-lg px-3 py-2 flex items-center gap-2">
-                <Tag className="w-3.5 h-3.5 text-primary shrink-0" />
-                <span className="text-sm text-primary font-medium">
-                  @{createForm.nombre.toLowerCase().replace(/\s+/g, "")}.{createForm.apellido.toLowerCase().replace(/\s+/g, "")}
-                </span>
-              </div>
-            )}
-
             <div className="space-y-2">
-              <Label>Correo Electrónico *</Label>
+              <Label>Correo Electrónico</Label>
               <Input type="email" placeholder="aliado@empresa.com" value={createForm.email}
                 onChange={e => setCreateForm({ ...createForm, email: e.target.value })} />
             </div>
             <div className="space-y-2">
-              <Label>Contraseña inicial *</Label>
+              <Label>Contraseña inicial</Label>
               <div className="relative">
                 <Input
                   type={showCreatePwd ? "text" : "password"}
@@ -340,17 +428,12 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {createError && <p className="text-destructive text-sm">{createError}</p>}
+            {createError && <p className="text-destructive text-sm font-medium">{createError}</p>}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setShowCreate(false)}>Cancelar</Button>
               <Button type="submit" disabled={creating}>
-                {creating ? (
-                  <span className="flex items-center gap-2">
-                    <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                    Creando...
-                  </span>
-                ) : "Crear Aliado"}
+                {creating ? "Creando..." : "Crear Aliado"}
               </Button>
             </DialogFooter>
           </form>
@@ -363,8 +446,7 @@ export default function AdminPage() {
           <DialogHeader>
             <DialogTitle>Cambiar Contraseña</DialogTitle>
             <DialogDescription>
-              Establece una nueva contraseña para{" "}
-              <span className="font-semibold">{pwdTarget?.nombre} {pwdTarget?.apellido}</span>
+              Establece una nueva contraseña para <span className="font-semibold">{pwdTarget?.nombre}</span>
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -373,7 +455,6 @@ export default function AdminPage() {
               <div className="relative">
                 <Input
                   type={showNewPwd ? "text" : "password"}
-                  placeholder="Mínimo 6 caracteres"
                   value={newPwd}
                   onChange={e => setNewPwd(e.target.value)}
                   className="pr-10"
@@ -384,7 +465,7 @@ export default function AdminPage() {
                 </button>
               </div>
             </div>
-            {pwdError && <p className="text-destructive text-sm">{pwdError}</p>}
+            {pwdError && <p className="text-destructive text-sm font-medium">{pwdError}</p>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPwdTarget(null)}>Cancelar</Button>
@@ -404,8 +485,8 @@ export default function AdminPage() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {toggleTarget?.activo
-                ? `${toggleTarget?.nombre} ${toggleTarget?.apellido} no podrá iniciar sesión ni registrar referidos.`
-                : `${toggleTarget?.nombre} ${toggleTarget?.apellido} volverá a tener acceso a la plataforma.`
+                ? `El aliado ${toggleTarget?.nombre} ya no podrá acceder al portal.`
+                : `El aliado ${toggleTarget?.nombre} recuperará el acceso al portal.`
               }
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -416,7 +497,7 @@ export default function AdminPage() {
               disabled={toggling}
               className={toggleTarget?.activo ? "bg-destructive hover:bg-destructive/90" : ""}
             >
-              {toggling ? "Procesando..." : toggleTarget?.activo ? "Sí, bloquear" : "Sí, activar"}
+              {toggling ? "Procesando..." : toggleTarget?.activo ? "Bloquear" : "Activar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

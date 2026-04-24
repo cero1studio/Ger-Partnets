@@ -12,6 +12,8 @@ export interface IUser extends Document {
   hubspotTagId?: string
   role: UserRole
   activo: boolean
+  resetToken?: string
+  resetTokenExpiry?: Date
   createdAt: Date
   updatedAt: Date
 }
@@ -27,6 +29,8 @@ const UserSchema = new Schema<IUser>(
     hubspotTagId:  { type: String, default: null },
     role:          { type: String, enum: ["admin", "aliado"], default: "aliado" },
     activo:        { type: Boolean, default: true },
+    resetToken:    { type: String, default: null },
+    resetTokenExpiry: { type: Date, default: null },
   },
   { timestamps: true }
 )

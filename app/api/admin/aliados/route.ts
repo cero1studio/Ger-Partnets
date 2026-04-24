@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs"
 import { getSession } from "@/lib/auth"
 import { connectDB } from "@/lib/mongodb"
 import User from "@/lib/models/User"
+import { getAllLeadsCountsByAlly } from "@/lib/hubspot"
 
 async function requireAdmin() {
   const session = await getSession()
@@ -17,10 +18,15 @@ export async function GET() {
   }
 
   await connectDB()
-  const aliados = await User.find({ role: "aliado" })
-    .select("-password")
-    .sort({ createdAt: -1 })
-    .lean()
+  const [aliadosRaw, leadCounts] = await Promise.all([
+    User.find({ role: "aliado" }).select("-password").sort({ createdAt: -1 }).lean(),
+    getAllLeadsCountsByAlly()
+  ])
+
+  const aliados = aliadosRaw.map((a: any) => ({
+    ...a,
+    leadCount: leadCounts[a.etiqueta] || 0
+  }))
 
   return NextResponse.json({ aliados })
 }

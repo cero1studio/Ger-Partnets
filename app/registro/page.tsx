@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useMemo, useEffect, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -11,6 +11,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CheckCircle, Globe, Users, BarChart3, Eye, EyeOff, Tag, PartyPopper } from "lucide-react"
 
 export default function RegistroPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-background"><span className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" /></div>}>
+      <RegistroContent />
+    </Suspense>
+  )
+}
+
+function RegistroContent() {
   const router = useRouter()
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
@@ -22,7 +30,27 @@ export default function RegistroPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const searchParams = useSearchParams()
+  const [isValidating, setIsValidating] = useState(true)
+  const [inviteError, setInviteError] = useState("")
   const [createdUser, setCreatedUser] = useState<{ nombre: string; etiqueta: string } | null>(null)
+
+  // Validar invitación al cargar
+  useEffect(() => {
+    const token = searchParams.get("token")
+    const emailParam = searchParams.get("email")
+    const nombreParam = searchParams.get("nombre")
+
+    if (!token) {
+      setInviteError("Este portal requiere una invitación válida para registrarse.")
+      setIsValidating(false)
+      return
+    }
+
+    if (emailParam) setEmail(emailParam)
+    if (nombreParam) setFirstName(nombreParam)
+    setIsValidating(false)
+  }, [searchParams])
 
   // Generate username tag from first name and last name
   const generatedTag = useMemo(() => {
@@ -83,7 +111,14 @@ export default function RegistroPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre: firstName, apellido: lastName, email, telefono: phone, password }),
+        body: JSON.stringify({ 
+          nombre: firstName, 
+          apellido: lastName, 
+          email, 
+          telefono: phone, 
+          password,
+          token: searchParams.get("token")
+        }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -187,6 +222,35 @@ export default function RegistroPage() {
             </p>
           </div>
         </div>
+      </div>
+    )
+  }
+
+  if (isValidating) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <span className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (inviteError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-background">
+        <Card className="max-w-md w-full border-destructive/20 shadow-xl">
+          <CardHeader className="text-center">
+            <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <UserX className="w-8 h-8 text-destructive" />
+            </div>
+            <CardTitle className="text-destructive">Acceso Restringido</CardTitle>
+            <CardDescription>{inviteError}</CardDescription>
+          </CardHeader>
+          <CardContent className="text-center pb-8">
+            <Link href="/">
+              <Button variant="outline" className="w-full">Volver al Inicio</Button>
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     )
   }
