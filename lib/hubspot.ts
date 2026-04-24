@@ -73,7 +73,7 @@ async function hsGet(path: string, params: Record<string, string> = {}) {
   return res.json()
 }
 
-async function hsPost(path: string, body: unknown) {
+async function hsPost(path: string, body: unknown, suppress409Log = false) {
   const res = await fetch(`${BASE}${path}`, {
     method: "POST",
     headers: HEADS,
@@ -82,7 +82,9 @@ async function hsPost(path: string, body: unknown) {
   })
   if (!res.ok) {
     const err = await res.text()
-    console.error(`[HubSpot Error] POST ${path} -> ${res.status}:`, err)
+    if (!(res.status === 409 && suppress409Log)) {
+      console.error(`[HubSpot Error] POST ${path} -> ${res.status}:`, err)
+    }
     throw new Error(`HubSpot POST ${path} → ${res.status}`)
   }
   return res.json()
@@ -304,7 +306,7 @@ async function ensureContactProfileProperty(): Promise<boolean> {
       description: "Perfilamiento capturado desde el portal de aliados.",
       hidden: false,
       hasUniqueValue: false,
-    })
+    }, true)
     return true
   } catch (err) {
     const message = (err as Error).message
