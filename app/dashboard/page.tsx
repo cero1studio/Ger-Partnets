@@ -360,6 +360,12 @@ function LeadCard({ lead, onClick }: { lead: Lead; onClick: () => void }) {
               <span className="truncate">{lead.nacionalidad}</span>
             </div>
           )}
+          {lead.owner && (
+            <div className="flex items-center gap-2 pt-0.5">
+              <Users className="w-3.5 h-3.5 shrink-0 text-primary/70" />
+              <span className="truncate font-medium text-primary/80 uppercase tracking-tight" style={{ fontSize: '10px' }}>Asesor: {lead.owner.nombre}</span>
+            </div>
+          )}
         </div>
         
         <div className="pt-2 mt-2 border-t border-border/50 flex items-center justify-between text-[11px] text-muted-foreground font-medium">
