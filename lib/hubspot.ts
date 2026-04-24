@@ -418,6 +418,7 @@ export async function createContact(params: {
   nivelEscolaridad?: string
   tagId: string
   aliadoUsername?: string
+  mensaje?: string
   notas?: string
 }) {
   let contactId: string | null = null
@@ -469,7 +470,7 @@ export async function createContact(params: {
   // Nuevas asignaciones solicitadas
   if (params.aliadoUsername && contactPropertyNames.has("etiqueta_del_aliado")) properties.etiqueta_del_aliado = params.aliadoUsername
   if (params.tuvoVisa !== undefined && contactPropertyNames.has("tiene_visa_")) properties.tiene_visa_ = params.tuvoVisa ? "SI" : "NO"
-  if (params.notas && contactPropertyNames.has("escriba_su_mensaje")) properties.escriba_su_mensaje = params.notas
+  if (params.mensaje && contactPropertyNames.has("escriba_su_mensaje")) properties.escriba_su_mensaje = params.mensaje
 
   if (profilePropertyReady && profileDescription) properties[PROFILE_PROP] = profileDescription
 

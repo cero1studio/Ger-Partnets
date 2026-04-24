@@ -81,6 +81,7 @@ export async function POST(req: NextRequest) {
       nivelEscolaridad,
       tagId,
       aliadoUsername,
+      mensaje: notas,
       notas: description,
     })
     return NextResponse.json({ ok: true, ...result }, { status: 201 })
