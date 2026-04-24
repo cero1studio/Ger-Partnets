@@ -117,28 +117,75 @@ export default function RegistroPage() {
   // ── Pantalla de bienvenida post-registro ────────────────
   if (createdUser) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-background">
-        <div className="w-full max-w-md text-center space-y-6">
-          <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-            <PartyPopper className="w-10 h-10 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">¡Bienvenido, {createdUser.nombre}!</h1>
-            <p className="text-muted-foreground mt-2">Tu cuenta fue creada exitosamente.</p>
-          </div>
-          <div className="bg-primary/5 border border-primary/20 rounded-xl p-5">
-            <p className="text-sm text-muted-foreground mb-1">Tu nombre de usuario es</p>
-            <div className="flex items-center justify-center gap-2">
-              <Tag className="w-5 h-5 text-primary" />
-              <span className="text-xl font-bold text-primary">@{createdUser.etiqueta}</span>
+      <div className="min-h-screen flex items-center justify-center p-6 bg-background relative overflow-hidden">
+        {/* Decorative elements */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl" />
+
+        <div className="w-full max-w-xl text-center space-y-8 relative">
+          <div className="space-y-4">
+            <Image 
+              src="/logo.png" 
+              alt="Global Express" 
+              width={100} 
+              height={100}
+              className="mx-auto h-20 w-auto animate-in fade-in zoom-in duration-700"
+            />
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider animate-in slide-in-from-top duration-500 delay-150">
+              <PartyPopper className="w-3 h-3" />
+              Registro Exitoso
             </div>
-            <p className="text-xs text-muted-foreground mt-3">
-              Con este nombre se identificarán todos los referidos que registres en la plataforma.
+          </div>
+
+          <div className="space-y-3">
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-foreground tracking-tight">
+              ¡Bienvenido a la familia <span className="text-primary">Global Express</span>, {createdUser.nombre}!
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-lg mx-auto leading-relaxed">
+              Ahora eres parte de una de las empresas líderes en reclutamiento internacional. Prepárate para transformar vidas.
             </p>
           </div>
-          <Button className="w-full h-11" onClick={() => router.push("/dashboard")}>
-            Ir al Dashboard
-          </Button>
+
+          <Card className="border-primary/20 bg-card/50 backdrop-blur-sm shadow-2xl overflow-hidden">
+            <CardContent className="p-8 space-y-6">
+              <div className="grid sm:grid-cols-2 gap-6 text-left">
+                <div className="space-y-2">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Users className="w-5 h-5 text-primary" />
+                  </div>
+                  <h3 className="font-bold text-foreground">Genera Ingresos</h3>
+                  <p className="text-sm text-muted-foreground">Registra a tus referidos y monitorea su progreso comercial en tiempo real.</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Globe className="w-5 h-5 text-primary" />
+                  </div>
+                  <h3 className="font-bold text-foreground">Cumple Sueños</h3>
+                  <p className="text-sm text-muted-foreground">Ayuda a cientos de personas a cumplir su proyecto de vida en los Estados Unidos.</p>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-border">
+                <p className="text-sm text-muted-foreground mb-3 font-medium uppercase tracking-widest">Tu Identificador de Aliado</p>
+                <div className="flex items-center justify-center gap-3 bg-primary/5 rounded-2xl py-4 border border-primary/10 group transition-all hover:border-primary/30">
+                  <Tag className="w-6 h-6 text-primary animate-pulse" />
+                  <span className="text-3xl font-black text-primary tracking-tighter">@{createdUser.etiqueta}</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-4 italic">
+                  * Este es el código que identificará a todos tus referidos dentro de nuestro CRM.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="pt-4">
+            <Button size="lg" className="w-full sm:w-64 h-12 text-lg font-bold shadow-lg shadow-primary/20" onClick={() => router.push("/dashboard")}>
+              Ir a mi Dashboard
+            </Button>
+            <p className="text-sm text-muted-foreground mt-6">
+              ¿Tienes dudas? Contacta a tu asesor asignado desde el panel principal.
+            </p>
+          </div>
         </div>
       </div>
     )
