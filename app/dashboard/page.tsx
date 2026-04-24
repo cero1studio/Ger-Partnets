@@ -510,12 +510,10 @@ function LeadDetail({ lead, etapas }: { lead: Lead; onClose: () => void; etapas:
 
 const nivelesEscolaridad = [
   "Primaria",
-  "Bachillerato",
-  "Técnico",
-  "Tecnólogo",
-  "Universitario",
-  "Posgrado",
-  "Otro",
+  "Bachillerato/Secundaria",
+  "Técnico/Tecnólogo",
+  "Profesional/Pregrado",
+  "Posgrado/Maestría"
 ]
 
 const programas = [

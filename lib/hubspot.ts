@@ -441,11 +441,30 @@ export async function createContact(params: {
     if (contactPropertyNames.has("nacionalidad")) properties.nacionalidad = params.nacionalidad
   }
   if (params.programa && contactPropertyNames.has("programa")) properties.programa = params.programa
-  if (params.profesion && contactPropertyNames.has("profesion")) properties.profesion = params.profesion
-  if (params.nivelEscolaridad && contactPropertyNames.has("nivel_escolaridad")) properties.nivel_escolaridad = params.nivelEscolaridad
+  
+  if (params.profesion) {
+    if (contactPropertyNames.has("profesion")) properties.profesion = params.profesion
+    if (contactPropertyNames.has("ocupacion_actual_2")) properties.ocupacion_actual_2 = params.profesion
+  }
+
+  if (params.nivelEscolaridad) {
+    if (contactPropertyNames.has("nivel_escolaridad")) properties.nivel_escolaridad = params.nivelEscolaridad
+    if (contactPropertyNames.has("escolaridad")) properties.escolaridad = params.nivelEscolaridad
+  }
+
   if (params.tipoVisa && contactPropertyNames.has("tipo_visa")) properties.tipo_visa = params.tipoVisa
   if (params.tuvoVisa !== undefined && contactPropertyNames.has("tuvo_visa")) properties.tuvo_visa = params.tuvoVisa ? "true" : "false"
-  if (params.puedeCubrirCostos && contactPropertyNames.has("puede_cubrir_costos")) properties.puede_cubrir_costos = params.puedeCubrirCostos
+
+  if (params.puedeCubrirCostos) {
+    if (contactPropertyNames.has("puede_cubrir_costos")) properties.puede_cubrir_costos = params.puedeCubrirCostos
+    let cap = ""
+    if (params.puedeCubrirCostos === "si") cap = "Cuento con recursos para cubrir los costos."
+    else if (params.puedeCubrirCostos === "con-financiamiento") cap = "Puedo gestionar un crédito o financiamiento."
+    else if (params.puedeCubrirCostos === "no") cap = "No tengo los recursos en este momento."
+    if (cap && contactPropertyNames.has("filtro_financiero__identificacion_de_capacidad_de_pago")) {
+      properties.filtro_financiero__identificacion_de_capacidad_de_pago = cap
+    }
+  }
 
   // Nuevas asignaciones solicitadas
   if (params.aliadoUsername && contactPropertyNames.has("etiqueta_del_aliado")) properties.etiqueta_del_aliado = params.aliadoUsername
