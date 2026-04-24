@@ -44,7 +44,8 @@ import {
   Briefcase,
   Globe2,
   DollarSign,
-  FileText
+  FileText,
+  Headset
 } from "lucide-react"
 
 type Lead = {
@@ -331,14 +332,6 @@ function LeadCard({ lead, onClick }: { lead: Lead; onClick: () => void }) {
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-semibold text-foreground text-sm leading-tight line-clamp-2">{lead.nombre}</h3>
-          {lead.owner && (
-            <Avatar className="w-6 h-6 shrink-0 border border-border" title={`Asesor: ${lead.owner.nombre}`}>
-              <AvatarImage src={lead.owner.foto} alt={lead.owner.nombre} />
-              <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-medium">
-                {lead.owner.nombre.split(" ").map(n => n[0]).join("").slice(0, 2)}
-              </AvatarFallback>
-            </Avatar>
-          )}
         </div>
         
         <div className="space-y-1.5 text-xs text-muted-foreground">
@@ -361,9 +354,9 @@ function LeadCard({ lead, onClick }: { lead: Lead; onClick: () => void }) {
             </div>
           )}
           {lead.owner && (
-            <div className="flex items-center gap-2 pt-0.5">
-              <Users className="w-3.5 h-3.5 shrink-0 text-primary/70" />
-              <span className="truncate font-medium text-primary/80 uppercase tracking-tight" style={{ fontSize: '10px' }}>Asesor: {lead.owner.nombre}</span>
+            <div className="flex items-center gap-2 pt-1">
+              <Headset className="w-3.5 h-3.5 shrink-0 text-primary/60" />
+              <span className="truncate text-[10.5px] font-semibold text-primary/70 tracking-tight">ASESOR: {lead.owner.nombre}</span>
             </div>
           )}
         </div>
