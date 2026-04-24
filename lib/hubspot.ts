@@ -288,7 +288,7 @@ export async function getContactsByTag(tagId: string) {
       etapa: stageId,
       stageLabel,
       ownerHubspotId: p.hubspot_owner_id ?? "",
-      owner: owner && owner.nombre ? { nombre: owner.nombre, email: owner.email } : null,
+      owner: owner ? { nombre: owner.nombre, email: owner.email, foto: owner.foto } : null,
       fechaRegistro: p.createdate ? new Date(p.createdate).toLocaleDateString("es-CO") : "",
       notas: cleanBackupNotes(p[PROFILE_PROP] ?? notesMap[c.id] ?? ""),
       contactId: c.id,
