@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/auth"
 import { connectDB } from "@/lib/mongodb"
 import User from "@/lib/models/User"
-import { getContactsByTag, createContact } from "@/lib/hubspot"
+import { getContactsByTag, createContact, getPipelineStages } from "@/lib/hubspot"
 
 // GET /api/leads — devuelve los contactos del aliado en formato embudo
 export async function GET() {
@@ -16,7 +16,9 @@ export async function GET() {
 
     const tagId = user.hubspotTagId ?? user.etiqueta
     const leads = await getContactsByTag(tagId)
-    return NextResponse.json({ leads })
+    const etapas = await getPipelineStages()
+    
+    return NextResponse.json({ leads, etapas })
   } catch (err) {
     console.error("[GET /api/leads]", err)
     return NextResponse.json({ error: "Error al obtener contactos de HubSpot" }, { status: 500 })
@@ -45,6 +47,7 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 })
 
     const tagId = user.hubspotTagId ?? user.etiqueta
+    const aliadoUsername = `${user.nombre} ${user.apellido}`.trim()
 
     // Codificar campos de perfilamiento y guardarlos con el registro del contacto/oportunidad
     const perfilLines = [
@@ -77,6 +80,7 @@ export async function POST(req: NextRequest) {
       profesion,
       nivelEscolaridad,
       tagId,
+      aliadoUsername,
       notas: description,
     })
     return NextResponse.json({ ok: true, ...result }, { status: 201 })

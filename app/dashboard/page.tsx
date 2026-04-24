@@ -61,7 +61,7 @@ type Lead = {
 }
 
 // Map actual pipeline stages using their native HubSpot IDs
-const etapas = [
+const defaultEtapas = [
   { id: "appointmentscheduled", nombre: "Contacto inicial", color: "bg-blue-500" },
   { id: "qualifiedtobuy", nombre: "No contesta", color: "bg-orange-500" },
   { id: "presentationscheduled", nombre: "Perfilamiento", color: "bg-purple-500" },
@@ -75,9 +75,24 @@ const etapas = [
   { id: "1062656365", nombre: "Lead perdido", color: "bg-red-500" },
 ]
 
+const colorMap: Record<string, string> = {
+  appointmentscheduled: "bg-blue-500",
+  qualifiedtobuy: "bg-orange-500",
+  presentationscheduled: "bg-purple-500",
+  decisionmakerboughtin: "bg-indigo-500",
+  "1226150813": "bg-cyan-500",
+  contractsent: "bg-pink-500",
+  closedwon: "bg-emerald-500",
+  closedlost: "bg-green-600",
+  "1062656363": "bg-yellow-500",
+  "1062656364": "bg-green-700",
+  "1062656365": "bg-red-500",
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const [leads, setLeads] = useState<Lead[]>([])
+  const [etapasState, setEtapasState] = useState(defaultEtapas)
   const [loadingLeads, setLoadingLeads] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
@@ -90,8 +105,16 @@ export default function DashboardPage() {
         return r.json()
       })
       .then(data => {
-        console.log("LEADS DATA RECIBIDA:", data) // ← ESTO AYUDARÁ A DEBUGGEAR EN TU CONSOLA DEL NAVEGADOR
+        console.log("LEADS DATA RECIBIDA:", data)
         if (data?.leads) setLeads(data.leads)
+        if (data?.etapas) {
+          const mappedEtapas = data.etapas.map((e: any) => ({
+            id: e.id,
+            nombre: e.nombre,
+            color: colorMap[e.id] || "bg-gray-500"
+          }))
+          setEtapasState(mappedEtapas)
+        }
         setLoadingLeads(false)
       })
       .catch(() => setLoadingLeads(false))
@@ -261,7 +284,7 @@ export default function DashboardPage() {
 
       <div className="overflow-x-auto pb-4 -mx-4 sm:-mx-6 px-4 sm:px-6">
           <div className="flex gap-4 min-w-max pb-2">
-          {etapas.map((etapa) => (
+          {etapasState.map((etapa) => (
             <div key={etapa.id} className="w-72 sm:w-80 shrink-0">
               <Card className="bg-muted/30 border-muted-foreground/10">
                 <CardHeader className="pb-3 px-4 pt-4">
@@ -291,7 +314,7 @@ export default function DashboardPage() {
 
       <Sheet open={!!selectedLead} onOpenChange={(open) => !open && setSelectedLead(null)}>
         <SheetContent className="w-full sm:max-w-lg overflow-hidden flex flex-col p-0">
-          {selectedLead && <LeadDetail lead={selectedLead} onClose={() => setSelectedLead(null)} />}
+          {selectedLead && <LeadDetail lead={selectedLead} onClose={() => setSelectedLead(null)} etapas={etapasState} />}
         </SheetContent>
       </Sheet>
     </div>
@@ -350,7 +373,7 @@ function LeadCard({ lead, onClick }: { lead: Lead; onClick: () => void }) {
   )
 }
 
-function LeadDetail({ lead }: { lead: Lead; onClose: () => void }) {
+function LeadDetail({ lead, etapas }: { lead: Lead; onClose: () => void; etapas: { id: string; nombre: string; color: string }[] }) {
   const etapa = etapas.find(e => e.id === lead.etapa)
 
   return (

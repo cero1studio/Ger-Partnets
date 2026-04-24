@@ -8,7 +8,7 @@ const BASE   = "https://api.hubapi.com"
 const TOKEN  = process.env.HUBSPOT_TOKEN!
 const HEADS  = { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" }
 
-// ─── Stage map ────────────────────────────────────────────
+// ─── Stage map fallback ─────────────────────────────────────
 export const STAGE_MAP: Record<string, string> = {
   appointmentscheduled:  "Contacto inicial",
   qualifiedtobuy:        "No contesta",
@@ -21,6 +21,36 @@ export const STAGE_MAP: Record<string, string> = {
   "1062656363":          "Retargeting",
   "1062656364":          "Lead ganado",
   "1062656365":          "Lead perdido",
+}
+
+export type PipelineStage = {
+  id: string
+  nombre: string
+  displayOrder: number
+}
+
+// ─── Dynamic Pipeline Stages ──────────────────────────────
+export async function getPipelineStages(): Promise<PipelineStage[]> {
+  try {
+    // Fetch the "default" pipeline for deals
+    const pipeline = await hsGet("/crm/v3/pipelines/deals/default")
+    if (pipeline && pipeline.stages) {
+      return pipeline.stages.map((s: any) => ({
+        id: s.id,
+        nombre: s.label,
+        displayOrder: s.displayOrder
+      })).sort((a: PipelineStage, b: PipelineStage) => a.displayOrder - b.displayOrder)
+    }
+  } catch (err) {
+    console.error("[HubSpot] Error fetching pipeline stages:", err)
+  }
+  
+  // Fallback if fetch fails
+  return Object.entries(STAGE_MAP).map(([id, nombre], index) => ({
+    id,
+    nombre,
+    displayOrder: index
+  }))
 }
 
 const CONTACT_PROPS = [
@@ -187,10 +217,62 @@ export async function getContactsByTag(tagId: string) {
   const ownersMap = await getOwnersBatch(ownerIds)
   const notesMap = await getLatestProfileNotesByContact(contacts.map((c: { id: string }) => c.id))
 
+  // Fetch deal associations to get dynamic stages
+  const contactIds = contacts.map((c: { id: string }) => c.id)
+  let dealsMap: Record<string, string> = {}
+
+  try {
+    const associations = await hsPost("/crm/v3/associations/contacts/deals/batch/read", {
+      inputs: contactIds.map(id => ({ id }))
+    })
+
+    const dealIds = new Set<string>()
+    const contactToDeal: Record<string, string[]> = {}
+    
+    for (const row of associations.results ?? []) {
+      const cId = String(row.from?.id ?? row.fromId ?? "")
+      if (!cId) continue
+      const dIds = (row.to ?? []).map((d: any) => String(d.id ?? d.toId ?? "")).filter(Boolean)
+      contactToDeal[cId] = dIds
+      dIds.forEach(id => dealIds.add(id))
+    }
+
+    if (dealIds.size > 0) {
+      const dealsBatch = await hsPost("/crm/v3/objects/deals/batch/read", {
+        inputs: [...dealIds].map(id => ({ id })),
+        properties: ["dealstage"]
+      })
+
+      const dealStageById: Record<string, string> = {}
+      for (const deal of dealsBatch.results ?? []) {
+        dealStageById[String(deal.id)] = deal.properties?.dealstage ?? ""
+      }
+
+      for (const cId of Object.keys(contactToDeal)) {
+        const dIds = contactToDeal[cId]
+        if (dIds.length > 0) {
+          const stages = dIds.map(id => dealStageById[id]).filter(Boolean)
+          if (stages.length > 0) {
+            dealsMap[cId] = stages[0] // Asumimos la primera oferta
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error("[getContactsByTag] Error fetching associated deals:", err)
+  }
+
+  // Fetch the latest dynamic pipeline stages for labels
+  const pipelineStages = await getPipelineStages()
+  const dynamicStageMap = Object.fromEntries(pipelineStages.map(s => [s.id, s.nombre]))
+
   return contacts.map((c: { id: string; properties: Record<string, string> }) => {
     const p = c.properties ?? {}
     const owner = p.hubspot_owner_id ? ownersMap[p.hubspot_owner_id] : null
     const nombre = `${p.firstname ?? ""} ${p.lastname ?? ""}`.trim() || p.email || "Sin nombre"
+
+    const stageId = dealsMap[c.id] || CONTACT_STAGE_DEFAULT
+    const stageLabel = dynamicStageMap[stageId] || STAGE_MAP[stageId] || "Contacto inicial"
 
     return {
       id: c.id,
@@ -198,8 +280,8 @@ export async function getContactsByTag(tagId: string) {
       email: p.email ?? "",
       telefono: p.phone || p.mobilephone || "",
       nacionalidad: p.country ?? "",
-      etapa: CONTACT_STAGE_DEFAULT,
-      stageLabel: STAGE_MAP[CONTACT_STAGE_DEFAULT] ?? "Contacto inicial",
+      etapa: stageId,
+      stageLabel,
       ownerHubspotId: p.hubspot_owner_id ?? "",
       owner: owner && owner.nombre ? { nombre: owner.nombre, email: owner.email } : null,
       fechaRegistro: p.createdate ? new Date(p.createdate).toLocaleDateString("es-CO") : "",
@@ -333,6 +415,7 @@ export async function createContact(params: {
   profesion?: string
   nivelEscolaridad?: string
   tagId: string
+  aliadoUsername?: string
   notas?: string
 }) {
   let contactId: string | null = null
@@ -345,20 +428,27 @@ export async function createContact(params: {
     lastname: params.apellido,
     email: params.email.toLowerCase(),
     phone: params.telefono,
-    country: params.nacionalidad ?? "",
     company: allyTagValue(params.tagId),
   }
 
   if (params.profesion) properties.jobtitle = params.profesion
 
   // Guardar en propiedades custom SOLO si existen en este portal de HubSpot.
-  if (params.nacionalidad && contactPropertyNames.has("nacionalidad")) properties.nacionalidad = params.nacionalidad
+  if (params.nacionalidad) {
+    properties.country = params.nacionalidad
+    if (contactPropertyNames.has("nacionalidad")) properties.nacionalidad = params.nacionalidad
+  }
   if (params.programa && contactPropertyNames.has("programa")) properties.programa = params.programa
   if (params.profesion && contactPropertyNames.has("profesion")) properties.profesion = params.profesion
   if (params.nivelEscolaridad && contactPropertyNames.has("nivel_escolaridad")) properties.nivel_escolaridad = params.nivelEscolaridad
   if (params.tipoVisa && contactPropertyNames.has("tipo_visa")) properties.tipo_visa = params.tipoVisa
   if (params.tuvoVisa !== undefined && contactPropertyNames.has("tuvo_visa")) properties.tuvo_visa = params.tuvoVisa ? "true" : "false"
   if (params.puedeCubrirCostos && contactPropertyNames.has("puede_cubrir_costos")) properties.puede_cubrir_costos = params.puedeCubrirCostos
+
+  // Nuevas asignaciones solicitadas
+  if (params.aliadoUsername && contactPropertyNames.has("etiqueta_del_aliado")) properties.etiqueta_del_aliado = params.aliadoUsername
+  if (params.tuvoVisa !== undefined && contactPropertyNames.has("tiene_visa_")) properties.tiene_visa_ = params.tuvoVisa ? "Sí" : "No"
+  if (params.notas && contactPropertyNames.has("escriba_su_mensaje")) properties.escriba_su_mensaje = params.notas
 
   if (profilePropertyReady && profileDescription) properties[PROFILE_PROP] = profileDescription
 
