@@ -165,7 +165,9 @@ async function getOwnersBatch(ids: string[]): Promise<Record<string, { nombre: s
     const normalizedOwner = {
       nombre: normalizedName,
       email: data.email ?? "",
-      foto: `https://ui-avatars.com/api/?name=${encodeURIComponent(normalizedName)}&background=0D8ABC&color=fff`
+      foto: data.email 
+        ? `https://unavatar.io/${data.email}?fallback=https://ui-avatars.com/api/?name=${encodeURIComponent(normalizedName)}&background=0D8ABC&color=fff`
+        : `https://ui-avatars.com/api/?name=${encodeURIComponent(normalizedName)}&background=0D8ABC&color=fff`
     }
 
     // Guardamos por todas las claves posibles para resolver referencias futuras.
