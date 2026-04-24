@@ -131,9 +131,9 @@ async function getOwnerById(ownerId: string): Promise<HubSpotOwner | null> {
   // `hubspot_owner_id` suele mapear al ID del owner, pero dejamos fallback
   // porque en algunas cuentas el ID puede comportarse como userId.
   const attempts = [
-    () => hsGet(`/crm/v3/owners/${ownerId}`, { idProperty: "id", archived: "true" }),
-    () => hsGet(`/crm/v3/owners/${ownerId}`, { idProperty: "userId", archived: "true" }),
-    () => hsGet(`/crm/v3/owners/${ownerId}`, { archived: "true" }),
+    () => hsGet(`/crm/v3/owners/${ownerId}`),
+    () => hsGet(`/crm/v3/owners/${ownerId}`, { idProperty: "id" }),
+    () => hsGet(`/crm/v3/owners/${ownerId}`, { idProperty: "userId" }),
   ]
 
   for (const request of attempts) {
