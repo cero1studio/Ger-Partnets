@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 })
 
     const tagId = user.hubspotTagId ?? user.etiqueta
-    const aliadoUsername = `${user.nombre} ${user.apellido}`.trim()
+    const aliadoUsername = user.etiqueta
 
     // Codificar campos de perfilamiento y guardarlos con el registro del contacto/oportunidad
     const perfilLines = [
