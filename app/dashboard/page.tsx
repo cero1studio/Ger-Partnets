@@ -30,7 +30,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   UserPlus,
   Users,
@@ -57,7 +57,7 @@ type Lead = {
   stageLabel?: string
   fechaRegistro: string
   notas?: string
-  owner?: { nombre: string; email: string } | null
+  owner?: { nombre: string; email: string; foto?: string } | null
 }
 
 // Map actual pipeline stages using their native HubSpot IDs
@@ -333,6 +333,7 @@ function LeadCard({ lead, onClick }: { lead: Lead; onClick: () => void }) {
           <h3 className="font-semibold text-foreground text-sm leading-tight line-clamp-2">{lead.nombre}</h3>
           {lead.owner && (
             <Avatar className="w-6 h-6 shrink-0 border border-border" title={`Asesor: ${lead.owner.nombre}`}>
+              <AvatarImage src={lead.owner.foto} alt={lead.owner.nombre} />
               <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-medium">
                 {lead.owner.nombre.split(" ").map(n => n[0]).join("").slice(0, 2)}
               </AvatarFallback>
@@ -410,6 +411,7 @@ function LeadDetail({ lead, etapas }: { lead: Lead; onClose: () => void; etapas:
             </h4>
             <div className="p-4 rounded-xl border border-primary/20 bg-primary/5 flex items-center gap-4 transition-colors hover:bg-primary/10">
               <Avatar className="w-10 h-10 border border-primary/20 shadow-sm">
+                <AvatarImage src={lead.owner.foto} alt={lead.owner.nombre} />
                 <AvatarFallback className="bg-white text-primary font-bold text-xs">
                   {lead.owner.nombre.split(" ").map(n => n[0]).join("").slice(0, 2)}
                 </AvatarFallback>
