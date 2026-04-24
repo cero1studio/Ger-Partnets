@@ -291,7 +291,7 @@ export default function LoginPage() {
           </Card>
 
           <p className="mx-auto mt-5 max-w-sm text-center text-xs text-muted-foreground">
-            Al iniciar sesión, aceptas nuestros términos de servicio y política de privacidad.
+            Al iniciar sesión, aceptas nuestros <Link href="/terminos" className="text-primary hover:underline">términos de servicio</Link> y política de privacidad.
           </p>
         </div>
       </div>

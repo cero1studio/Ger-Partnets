@@ -406,7 +406,7 @@ export default function RegistroPage() {
           </Card>
 
           <p className="text-center text-xs text-muted-foreground mt-6">
-            Al registrarte, aceptas nuestros términos de servicio y política de privacidad.
+            Al registrarte, aceptas nuestros <Link href="/terminos" className="text-primary hover:underline">términos de servicio</Link> y política de privacidad.
           </p>
         </div>
       </div>
