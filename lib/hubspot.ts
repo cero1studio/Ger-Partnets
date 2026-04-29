@@ -61,7 +61,17 @@ const CONTACT_PROPS = [
 const CONTACT_STAGE_DEFAULT = "appointmentscheduled"
 const ALLY_TAG_PREFIX = "GER_TAG:"
 const PROFILE_PROP = "perfil_aliado"
-let contactPropertiesPromise: Promise<Set<string>> | null = null
+const HUBSPOT_OCUPACION_ACTUAL_ALLOWED = new Map<string, string>([
+  ["empleado", "Empleado"],
+  ["desempleado", "Desempleado"],
+  ["independiente", "Independiente"],
+  ["estudiante", "Estudiante"],
+])
+type ContactPropertyMeta = {
+  names: Set<string>
+  enumValueMaps: Record<string, Map<string, string>>
+}
+let contactPropertiesPromise: Promise<ContactPropertyMeta> | null = null
 
 // ─── Helpers ──────────────────────────────────────────────
 
@@ -105,11 +115,67 @@ async function hsPatch(path: string, body: unknown) {
   return res.json()
 }
 
-async function getContactPropertyNames(): Promise<Set<string>> {
+function normalizeEnumToken(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+}
+
+function getEnumValueForProperty(
+  enumValueMaps: Record<string, Map<string, string>>,
+  propertyName: string,
+  rawValue: string
+): string | null {
+  const enumMap = enumValueMaps[propertyName]
+  if (!enumMap) return null
+
+  const normalizedRaw = normalizeEnumToken(rawValue)
+  if (!normalizedRaw) return null
+
+  const exact = enumMap.get(normalizedRaw)
+  if (exact) return exact
+
+  return enumMap.get("otro") ?? enumMap.get("otra") ?? enumMap.get("other") ?? null
+}
+
+function getHubspotOcupacionActualValue(rawValue: string): string | null {
+  const normalized = normalizeEnumToken(rawValue)
+  return HUBSPOT_OCUPACION_ACTUAL_ALLOWED.get(normalized) ?? null
+}
+
+async function getContactPropertyNames(): Promise<ContactPropertyMeta> {
   if (!contactPropertiesPromise) {
     contactPropertiesPromise = hsGet("/crm/v3/properties/contacts")
-      .then((data) => new Set((data.results ?? []).map((p: { name: string }) => p.name)))
-      .catch(() => new Set<string>())
+      .then((data) => {
+        const names = new Set<string>()
+        const enumValueMaps: Record<string, Map<string, string>> = {}
+
+        for (const property of data.results ?? []) {
+          const name = String(property?.name ?? "")
+          if (!name) continue
+          names.add(name)
+
+          const options = Array.isArray(property?.options) ? property.options : []
+          if (!options.length) continue
+
+          const map = new Map<string, string>()
+          for (const option of options) {
+            const optionValue = String(option?.value ?? "").trim()
+            if (!optionValue) continue
+
+            map.set(normalizeEnumToken(optionValue), optionValue)
+            const optionLabel = String(option?.label ?? "").trim()
+            if (optionLabel) map.set(normalizeEnumToken(optionLabel), optionValue)
+          }
+
+          if (map.size) enumValueMaps[name] = map
+        }
+
+        return { names, enumValueMaps }
+      })
+      .catch(() => ({ names: new Set<string>(), enumValueMaps: {} }))
   }
   return contactPropertiesPromise
 }
@@ -452,7 +518,7 @@ export async function createContact(params: {
   let contactId: string | null = null
   const profileDescription = cleanBackupNotes(params.notas ?? "")
   const profilePropertyReady = profileDescription ? await ensureContactProfileProperty() : false
-  const contactPropertyNames = await getContactPropertyNames()
+  const { names: contactPropertyNames, enumValueMaps } = await getContactPropertyNames()
 
   const properties: Record<string, string> = {
     firstname: params.nombre,
@@ -473,7 +539,12 @@ export async function createContact(params: {
   
   if (params.profesion) {
     if (contactPropertyNames.has("profesion")) properties.profesion = params.profesion
-    if (contactPropertyNames.has("ocupacion_actual_2")) properties.ocupacion_actual_2 = params.profesion
+    if (contactPropertyNames.has("ocupacion_actual_2")) {
+      // Esta propiedad es un catálogo cerrado en este portal.
+      // Solo aceptamos los valores exactos permitidos por HubSpot.
+      const ocupacionHubspot = getHubspotOcupacionActualValue(params.profesion)
+      if (ocupacionHubspot) properties.ocupacion_actual_2 = ocupacionHubspot
+    }
   }
 
   if (params.nivelEscolaridad) {

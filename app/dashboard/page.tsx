@@ -41,7 +41,6 @@ import {
   ChevronRight,
   ChevronLeft,
   CheckCircle2,
-  Briefcase,
   Globe2,
   DollarSign,
   FileText,
@@ -536,6 +535,13 @@ const paises = [
   "Otro",
 ]
 
+const ocupacionesPermitidas = [
+  "Empleado",
+  "Desempleado",
+  "Independiente",
+  "Estudiante",
+]
+
 type LeadFormProps = {
   formData: any
   setFormData: any
@@ -806,17 +812,22 @@ function LeadForm({ formData, setFormData, handleSubmit, onCancel, isSaving }: L
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2 min-w-0">
-                <Label htmlFor="profesion" className="text-xs font-bold text-foreground/80 uppercase tracking-wider">Profesión u Oficio (Opcional)</Label>
-                <div className="relative">
-                  <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="profesion"
-                    placeholder="Ej: Electricista"
-                    value={formData.profesion}
-                    onChange={(e) => setFormData({ ...formData, profesion: e.target.value })}
-                    className="h-12 pl-11 bg-muted/20 text-base"
-                  />
-                </div>
+                <Label className="text-xs font-bold text-foreground/80 uppercase tracking-wider">Ocupación actual (Opcional)</Label>
+                <Select
+                  value={formData.profesion}
+                  onValueChange={(value) => setFormData({ ...formData, profesion: value })}
+                >
+                  <SelectTrigger className="h-12 w-full bg-muted/20 text-base min-w-0">
+                    <SelectValue placeholder="Selecciona una opción" className="truncate" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ocupacionesPermitidas.map((ocupacion) => (
+                      <SelectItem key={ocupacion} value={ocupacion}>
+                        {ocupacion}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2 min-w-0">
                 <Label className="text-xs font-bold text-foreground/80 uppercase tracking-wider">Escolaridad (Opcional)</Label>
