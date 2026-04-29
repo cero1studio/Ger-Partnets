@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server"
 import { resend } from "@/lib/resend"
-import dbConnect from "@/lib/mongodb"
+import { connectDB } from "@/lib/mongodb"
 import User from "@/lib/models/User"
 import { getResetPasswordEmail } from "@/lib/emails"
 import crypto from "crypto"
 
 export async function POST(req: Request) {
   try {
-    await dbConnect()
+    await connectDB()
     const { email } = await req.json()
 
     if (!email) {
@@ -31,6 +31,10 @@ export async function POST(req: Request) {
     // Crear link
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
     const resetLink = `${baseUrl}/restablecer-contrasena?token=${token}`
+
+    if (!resend) {
+      return NextResponse.json({ error: "Servicio de correo no configurado" }, { status: 500 })
+    }
 
     // Enviar correo
     const { error } = await resend.emails.send({

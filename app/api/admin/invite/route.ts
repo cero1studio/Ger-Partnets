@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server"
 import { resend } from "@/lib/resend"
-import dbConnect from "@/lib/mongodb"
+import { connectDB } from "@/lib/mongodb"
 import Invitation from "@/lib/models/Invitation"
 import { getInvitationEmail } from "@/lib/emails"
 import crypto from "crypto"
 
 export async function POST(req: Request) {
   try {
-    await dbConnect()
+    await connectDB()
     const { nombre, email } = await req.json()
 
     if (!nombre || !email) {
@@ -23,6 +23,10 @@ export async function POST(req: Request) {
     // Crear link
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
     const inviteLink = `${baseUrl}/registro?token=${token}&email=${encodeURIComponent(email)}&nombre=${encodeURIComponent(nombre)}`
+
+    if (!resend) {
+      return NextResponse.json({ error: "Servicio de correo no configurado" }, { status: 500 })
+    }
 
     // Enviar correo
     const { data, error } = await resend.emails.send({
