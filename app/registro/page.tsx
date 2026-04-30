@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckCircle, Globe, Users, BarChart3, Eye, EyeOff, Tag, PartyPopper } from "lucide-react"
+import { CheckCircle, Globe, Users, BarChart3, Eye, EyeOff, Tag, PartyPopper, UserX } from "lucide-react"
 
 export default function RegistroPage() {
   return (
