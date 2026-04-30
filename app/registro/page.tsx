@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckCircle, Globe, Users, BarChart3, Eye, EyeOff, Tag, PartyPopper, UserX } from "lucide-react"
+import { CheckCircle, Globe, Users, BarChart3, Eye, EyeOff, Tag, PartyPopper } from "lucide-react"
 
 export default function RegistroPage() {
   return (
@@ -32,20 +32,12 @@ function RegistroContent() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const searchParams = useSearchParams()
   const [isValidating, setIsValidating] = useState(true)
-  const [inviteError, setInviteError] = useState("")
   const [createdUser, setCreatedUser] = useState<{ nombre: string; etiqueta: string } | null>(null)
 
-  // Validar invitación al cargar
+  // Prefill opcional desde query params
   useEffect(() => {
-    const token = searchParams.get("token")
     const emailParam = searchParams.get("email")
     const nombreParam = searchParams.get("nombre")
-
-    if (!token) {
-      setInviteError("Este portal requiere una invitación válida para registrarse.")
-      setIsValidating(false)
-      return
-    }
 
     if (emailParam) setEmail(emailParam)
     if (nombreParam) setFirstName(nombreParam)
@@ -230,27 +222,6 @@ function RegistroContent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <span className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-      </div>
-    )
-  }
-
-  if (inviteError) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-background">
-        <Card className="max-w-md w-full border-destructive/20 shadow-xl">
-          <CardHeader className="text-center">
-            <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <UserX className="w-8 h-8 text-destructive" />
-            </div>
-            <CardTitle className="text-destructive">Acceso Restringido</CardTitle>
-            <CardDescription>{inviteError}</CardDescription>
-          </CardHeader>
-          <CardContent className="text-center pb-8">
-            <Link href="/">
-              <Button variant="outline" className="w-full">Volver al Inicio</Button>
-            </Link>
-          </CardContent>
-        </Card>
       </div>
     )
   }

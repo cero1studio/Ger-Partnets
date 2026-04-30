@@ -9,17 +9,16 @@ export async function POST(req: NextRequest) {
   try {
     const { nombre, apellido, email, telefono, password, token: inviteToken } = await req.json()
 
-    if (!nombre || !apellido || !email || !telefono || !password || !inviteToken) {
-      return NextResponse.json({ error: "Todos los campos son requeridos, incluyendo la invitación" }, { status: 400 })
+    if (!nombre || !apellido || !email || !telefono || !password) {
+      return NextResponse.json({ error: "Todos los campos son requeridos" }, { status: 400 })
     }
 
     await connectDB()
 
-    // Validar invitación
-    const invitation = await Invitation.findOne({ token: inviteToken, usada: false })
-    if (!invitation) {
-      return NextResponse.json({ error: "La invitación es inválida o ya fue utilizada" }, { status: 403 })
-    }
+    // Si viene token de invitación, se intenta consumir de forma opcional.
+    const invitation = inviteToken
+      ? await Invitation.findOne({ token: inviteToken, usada: false })
+      : null
 
     const existe = await User.findOne({ email: email.toLowerCase() })
     if (existe) {
@@ -46,9 +45,11 @@ export async function POST(req: NextRequest) {
       hubspotTagId: etiqueta,
     })
 
-    // Marcar invitación como usada
-    invitation.usada = true
-    await invitation.save()
+    // Marcar invitación como usada solo cuando existe.
+    if (invitation) {
+      invitation.usada = true
+      await invitation.save()
+    }
 
     const token = signToken({
       userId:   user._id.toString(),
