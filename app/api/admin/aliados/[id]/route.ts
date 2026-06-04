@@ -61,3 +61,31 @@ export async function PATCH(
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
   }
 }
+
+// DELETE /api/admin/aliados/[id] — eliminar aliado
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  if (!(await requireAdmin())) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 })
+  }
+
+  const { id } = await params
+
+  try {
+    await connectDB()
+
+    const user = await User.findById(id)
+    if (!user || user.role === "admin") {
+      return NextResponse.json({ error: "Aliado no encontrado" }, { status: 404 })
+    }
+
+    await User.findByIdAndDelete(id)
+
+    return NextResponse.json({ ok: true })
+  } catch (err) {
+    console.error("[admin/aliados DELETE]", err)
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
+  }
+}

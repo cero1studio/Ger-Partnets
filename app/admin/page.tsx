@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { 
   Eye, EyeOff, Plus, Lock, Unlock, KeyRound, Users, UserCheck, 
-  UserX, Tag, Search, Mail, Send, Check, Loader2, Info
+  UserX, Tag, Search, Mail, Send, Check, Loader2, Info, Trash2
 } from "lucide-react"
 import Image from "next/image"
 
@@ -68,6 +68,28 @@ export default function AdminPage() {
       setExpandedLeadId(null)
     }
   }, [leadsTarget, fetchLeads])
+
+  // Alert eliminar
+  const [deleteTarget, setDeleteTarget] = useState<Aliado | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/admin/aliados/${deleteTarget._id}`, {
+        method: "DELETE",
+      })
+      if (res.ok) {
+        setAliados(prev => prev.filter(a => a._id !== deleteTarget._id))
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setDeleting(false)
+      setDeleteTarget(null)
+    }
+  }
 
   // Modal invitar
   const [showInvite, setShowInvite] = useState(false)
@@ -334,10 +356,20 @@ export default function AdminPage() {
                           <Button 
                             size="icon" 
                             variant="ghost" 
-                            className={`h-8 w-8 ${aliado.activo ? 'text-red-400 hover:text-red-600' : 'text-green-400 hover:text-green-600'}`} 
+                            className={`h-8 w-8 ${aliado.activo ? 'text-amber-500 hover:text-amber-600' : 'text-green-500 hover:text-green-600'}`} 
                             onClick={() => setToggleTarget(aliado)}
+                            title={aliado.activo ? "Bloquear" : "Activar"}
                           >
                             {aliado.activo ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                          </Button>
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => setDeleteTarget(aliado)}
+                            title="Eliminar Aliado"
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
                       </td>
@@ -645,6 +677,31 @@ export default function AdminPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── Alert: Eliminar Aliado ────────────────────────── */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-600 font-bold flex items-center gap-2">
+              <Trash2 className="w-5 h-5" />
+              ¿Eliminar aliado estratégicamente?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará al aliado <strong>{deleteTarget?.nombre} {deleteTarget?.apellido}</strong> de la base de datos de forma permanente. El aliado perderá acceso de inmediato. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-destructive hover:bg-destructive/90 text-white font-semibold"
+            >
+              {deleting ? "Eliminando..." : "Eliminar Permanentemente"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
