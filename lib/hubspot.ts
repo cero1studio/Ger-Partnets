@@ -526,6 +526,7 @@ export async function createContact(params: {
   nivelEscolaridad?: string
   tagId: string
   aliadoUsername?: string
+  parentEtiqueta?: string
   mensaje?: string
   notas?: string
 }) {
@@ -582,6 +583,7 @@ export async function createContact(params: {
 
   // Nuevas asignaciones solicitadas
   if (params.aliadoUsername && contactPropertyNames.has("etiqueta_del_aliado")) properties.etiqueta_del_aliado = params.aliadoUsername
+  if (params.parentEtiqueta && contactPropertyNames.has("etiqueta_del_aliado_padre")) properties.etiqueta_del_aliado_padre = params.parentEtiqueta
   if (params.tuvoVisa !== undefined && contactPropertyNames.has("tiene_visa_")) properties.tiene_visa_ = params.tuvoVisa ? "SI" : "NO"
   if (params.mensaje && contactPropertyNames.has("escriba_su_mensaje")) properties.escriba_su_mensaje = params.mensaje
 

@@ -34,13 +34,25 @@ function RegistroContent() {
   const [isValidating, setIsValidating] = useState(true)
   const [createdUser, setCreatedUser] = useState<{ nombre: string; etiqueta: string } | null>(null)
 
+  const [refTag, setRefTag] = useState<string | null>(null)
+  const [parentName, setParentName] = useState<string | null>(null)
+
   // Prefill opcional desde query params
   useEffect(() => {
     const emailParam = searchParams.get("email")
     const nombreParam = searchParams.get("nombre")
+    const refParam = searchParams.get("ref")
 
     if (emailParam) setEmail(emailParam)
     if (nombreParam) setFirstName(nombreParam)
+    if (refParam) {
+      setRefTag(refParam)
+      // Lookup parent name for visual feedback
+      fetch(`/api/aliados/lookup?etiqueta=${encodeURIComponent(refParam)}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data?.nombre) setParentName(data.nombre) })
+        .catch(() => {})
+    }
     setIsValidating(false)
   }, [searchParams])
 
@@ -109,7 +121,8 @@ function RegistroContent() {
           email, 
           telefono: phone, 
           password,
-          token: searchParams.get("token")
+          token: searchParams.get("token"),
+          ref: refTag,
         }),
       })
       const data = await res.json()
@@ -288,8 +301,16 @@ function RegistroContent() {
             <CardHeader className="space-y-1 pb-4">
               <CardTitle className="text-2xl font-bold text-center">Crear Cuenta</CardTitle>
               <CardDescription className="text-center">
-                Completa tus datos para registrarte como aliado
+                {refTag
+                  ? `Te estás registrando bajo la red de ${parentName ?? refTag}`
+                  : "Completa tus datos para registrarte como aliado"}
               </CardDescription>
+              {refTag && (
+                <div className="mt-2 mx-auto flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-700 text-xs font-semibold border border-emerald-500/20">
+                  <Users className="w-3.5 h-3.5" />
+                  Registro como subaliado de @{refTag}
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">

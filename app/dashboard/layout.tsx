@@ -20,10 +20,12 @@ import {
   LogOut,
   Menu,
   X,
+  Network,
 } from "lucide-react"
 
 const navigation = [
   { name: "Mis Referidos", href: "/dashboard", icon: Kanban },
+  { name: "Mi Red", href: "/dashboard/red", icon: Network },
   { name: "Mi Perfil", href: "/dashboard/perfil", icon: User },
 ]
 

@@ -7,7 +7,7 @@ import { signToken, cookieName } from "@/lib/auth"
 
 export async function POST(req: NextRequest) {
   try {
-    const { nombre, apellido, email, telefono, password, token: inviteToken } = await req.json()
+    const { nombre, apellido, email, telefono, password, token: inviteToken, ref } = await req.json()
 
     if (!nombre || !apellido || !email || !telefono || !password) {
       return NextResponse.json({ error: "Todos los campos son requeridos" }, { status: 400 })
@@ -35,6 +35,14 @@ export async function POST(req: NextRequest) {
 
     const hash = await bcrypt.hash(password, 10)
 
+    let parentId = null
+    if (ref) {
+      const parentUser = await User.findOne({ etiqueta: ref.toLowerCase() })
+      if (parentUser) {
+        parentId = parentUser._id
+      }
+    }
+
     const user = await User.create({
       nombre,
       apellido,
@@ -43,6 +51,7 @@ export async function POST(req: NextRequest) {
       password: hash,
       etiqueta,
       hubspotTagId: etiqueta,
+      parentId,
     })
 
     // Marcar invitación como usada solo cuando existe.

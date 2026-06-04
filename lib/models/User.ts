@@ -14,6 +14,7 @@ export interface IUser extends Document {
   activo: boolean
   resetToken?: string
   resetTokenExpiry?: Date
+  parentId?: mongoose.Types.ObjectId | string // Referencia al aliado principal (padre)
   createdAt: Date
   updatedAt: Date
 }
@@ -31,6 +32,7 @@ const UserSchema = new Schema<IUser>(
     activo:        { type: Boolean, default: true },
     resetToken:    { type: String, default: null },
     resetTokenExpiry: { type: Date, default: null },
+    parentId:      { type: Schema.Types.ObjectId, ref: "User", default: null },
   },
   { timestamps: true }
 )

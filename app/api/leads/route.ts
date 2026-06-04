@@ -49,6 +49,13 @@ export async function POST(req: NextRequest) {
     const tagId = user.hubspotTagId ?? user.etiqueta
     const aliadoUsername = user.etiqueta
 
+    // Si el aliado tiene un padre (es subaliado), obtener la etiqueta del padre
+    let parentEtiqueta: string | null = null
+    if (user.parentId) {
+      const parentUser = await User.findById(user.parentId)
+      if (parentUser) parentEtiqueta = parentUser.etiqueta
+    }
+
     // Codificar campos de perfilamiento y guardarlos con el registro del contacto/oportunidad
     const perfilLines = [
       `[Email de Respaldo]: ${email}`,
@@ -62,6 +69,7 @@ export async function POST(req: NextRequest) {
         puedeCubrirCostos === "si" ? "Sí" :
         puedeCubrirCostos === "con-financiamiento" ? "Con financiamiento" : "No"
       }` : null,
+      parentEtiqueta ? `Aliado Padre: @${parentEtiqueta}` : null,
       notas ? `Notas: ${notas}` : null,
     ].filter(Boolean)
 
@@ -81,6 +89,7 @@ export async function POST(req: NextRequest) {
       nivelEscolaridad,
       tagId,
       aliadoUsername,
+      parentEtiqueta: parentEtiqueta ?? undefined,
       mensaje: notas,
       notas: description,
     })
