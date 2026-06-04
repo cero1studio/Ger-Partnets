@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, Fragment } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -35,6 +35,39 @@ export default function AdminPage() {
   const [aliados, setAliados] = useState<Aliado[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
+
+  // Modal ver leads
+  const [leadsTarget, setLeadsTarget] = useState<Aliado | null>(null)
+  const [leads, setLeads] = useState<any[]>([])
+  const [loadingLeads, setLoadingLeads] = useState(false)
+  const [expandedLeadId, setExpandedLeadId] = useState<string | null>(null)
+
+  const fetchLeads = useCallback(async (aliadoId: string) => {
+    setLoadingLeads(true)
+    try {
+      const res = await fetch(`/api/admin/aliados/${aliadoId}/leads`)
+      if (res.ok) {
+        const data = await res.json()
+        setLeads(data.leads || [])
+      } else {
+        setLeads([])
+      }
+    } catch (err) {
+      console.error(err)
+      setLeads([])
+    } finally {
+      setLoadingLeads(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (leadsTarget) {
+      fetchLeads(leadsTarget._id)
+    } else {
+      setLeads([])
+      setExpandedLeadId(null)
+    }
+  }, [leadsTarget, fetchLeads])
 
   // Modal invitar
   const [showInvite, setShowInvite] = useState(false)
@@ -272,8 +305,13 @@ export default function AdminPage() {
                           @{aliado.etiqueta}
                         </Badge>
                       </td>
-                      <td className="px-6 py-4 text-center font-bold text-primary">
-                        {aliado.leadCount || 0}
+                      <td className="px-6 py-4 text-center">
+                        <button
+                          onClick={() => setLeadsTarget(aliado)}
+                          className="font-bold text-primary hover:underline hover:text-primary/80 transition-colors inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-primary/5"
+                        >
+                          {aliado.leadCount || 0}
+                        </button>
                       </td>
                       <td className="px-6 py-4">
                         <Badge
@@ -287,7 +325,10 @@ export default function AdminPage() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setPwdTarget(aliado)} title="Password">
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setLeadsTarget(aliado)} title="Ver Leads">
+                            <Users className="w-4 h-4 text-muted-foreground" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setPwdTarget(aliado)} title="Contraseña">
                             <KeyRound className="w-4 h-4 text-muted-foreground" />
                           </Button>
                           <Button 
@@ -502,6 +543,108 @@ export default function AdminPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ── Modal: Ver Leads del Aliado ────────────────────── */}
+      <Dialog open={!!leadsTarget} onOpenChange={open => { if (!open) setLeadsTarget(null) }}>
+        <DialogContent className="sm:max-w-3xl max-h-[85vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-4 border-b">
+            <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+              <Users className="w-5 h-5 text-primary" />
+              Leads de {leadsTarget?.nombre} {leadsTarget?.apellido}
+            </DialogTitle>
+            <DialogDescription>
+              Listado de referidos registrados por este aliado (Etiqueta: @{leadsTarget?.etiqueta})
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto p-6 min-h-[300px]">
+            {loadingLeads ? (
+              <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                <Loader2 className="w-8 h-8 animate-spin text-primary mb-2" />
+                <span className="text-sm font-medium">Cargando leads desde HubSpot...</span>
+              </div>
+            ) : leads.length === 0 ? (
+              <div className="text-center py-20">
+                <Users className="w-12 h-12 mx-auto mb-4 opacity-20 text-primary" />
+                <p className="text-muted-foreground font-medium">Este aliado no tiene leads registrados todavía.</p>
+              </div>
+            ) : (
+              <div className="border rounded-xl overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50 text-muted-foreground font-semibold border-b">
+                      <tr>
+                        <th className="px-4 py-3 text-left">Nombre</th>
+                        <th className="px-4 py-3 text-left">Contacto</th>
+                        <th className="px-4 py-3 text-left">Nacionalidad</th>
+                        <th className="px-4 py-3 text-left">Etapa</th>
+                        <th className="px-4 py-3 text-left">Fecha Reg.</th>
+                        <th className="px-4 py-3 text-right w-12">Detalles</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {leads.map((lead) => (
+                        <Fragment key={lead.id}>
+                          <tr className="hover:bg-muted/30 transition-colors">
+                            <td className="px-4 py-3 font-semibold text-foreground">
+                              {lead.nombre}
+                            </td>
+                            <td className="px-4 py-3 text-xs space-y-0.5">
+                              <p className="text-foreground font-medium">{lead.email}</p>
+                              <p className="text-muted-foreground">{lead.telefono}</p>
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {lead.nacionalidad || "—"}
+                            </td>
+                            <td className="px-4 py-3">
+                              <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[11px] font-semibold whitespace-nowrap">
+                                {lead.stageLabel || lead.etapa}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground text-xs">
+                              {lead.fechaRegistro}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              {lead.notas && (
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                  onClick={() => setExpandedLeadId(expandedLeadId === lead.id ? null : lead.id)}
+                                  title="Ver perfilamiento"
+                                >
+                                  <Info className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                          {expandedLeadId === lead.id && lead.notas && (
+                            <tr className="bg-muted/20">
+                              <td colSpan={6} className="px-4 py-3 text-xs text-muted-foreground whitespace-pre-line border-t border-b">
+                                <div className="bg-background p-4 rounded-xl border space-y-2">
+                                  <p className="font-bold text-[10px] uppercase tracking-wider text-primary">Perfil del Referido</p>
+                                  <div className="text-foreground leading-relaxed">
+                                    {lead.notas}
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="p-4 bg-muted/30 border-t">
+            <Button type="button" variant="outline" onClick={() => setLeadsTarget(null)}>
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
