@@ -19,12 +19,17 @@ export async function GET() {
 
   await connectDB()
   const [aliadosRaw, leadCounts] = await Promise.all([
-    User.find({ role: "aliado" }).select("-password").sort({ createdAt: -1 }).lean(),
+    User.find({ role: "aliado" }).select("-password").populate("parentId", "nombre apellido etiqueta").sort({ createdAt: -1 }).lean(),
     getAllLeadsCountsByAlly()
   ])
 
   const aliados = aliadosRaw.map((a: any) => ({
     ...a,
+    parent: a.parentId ? {
+      nombre: a.parentId.nombre,
+      apellido: a.parentId.apellido,
+      etiqueta: a.parentId.etiqueta
+    } : null,
     leadCount: leadCounts[a.etiqueta] || 0
   }))
 

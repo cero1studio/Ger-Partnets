@@ -29,6 +29,7 @@ type Aliado = {
   activo: boolean
   createdAt: string
   leadCount?: number
+  parent?: { nombre: string; apellido: string; etiqueta: string } | null
 }
 
 export default function AdminPage() {
@@ -323,9 +324,16 @@ export default function AdminPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 hidden sm:table-cell">
-                        <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 font-bold text-[10px]">
-                          @{aliado.etiqueta}
-                        </Badge>
+                        <div className="flex flex-col gap-1 items-start">
+                          <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 font-bold text-[10px]">
+                            @{aliado.etiqueta}
+                          </Badge>
+                          {aliado.parent && (
+                            <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200 text-[9px] uppercase mt-1">
+                              Subaliado de @{aliado.parent.etiqueta}
+                            </Badge>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-center">
                         <button
