@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { 
   Eye, EyeOff, Plus, Lock, Unlock, KeyRound, Users, UserCheck, 
-  UserX, Tag, Search, Mail, Send, Check, Loader2, Info, Trash2
+  UserX, Tag, Search, Mail, Send, Check, Loader2, Info, Trash2, UserPlus
 } from "lucide-react"
 import Image from "next/image"
 
@@ -115,6 +115,46 @@ export default function AdminPage() {
   // Alert bloquear/desbloquear
   const [toggleTarget, setToggleTarget] = useState<Aliado | null>(null)
   const [toggling, setToggling] = useState(false)
+
+  // Modal añadir lead
+  const [addLeadTarget, setAddLeadTarget] = useState<Aliado | null>(null)
+  const [addingLead, setAddingLead] = useState(false)
+  const [leadForm, setLeadForm] = useState({
+    nombre: "", apellido: "", email: "", telefono: "", nacionalidad: "", programa: "",
+    puedeCubrirCostos: "", profesion: "", nivelEscolaridad: "", notas: ""
+  })
+  const [leadError, setLeadError] = useState("")
+
+  const handleAddLead = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLeadError("")
+    if (!leadForm.nombre || !leadForm.apellido || !leadForm.email || !leadForm.telefono) {
+      setLeadError("Nombre, apellido, email y teléfono son requeridos")
+      return
+    }
+    setAddingLead(true)
+    try {
+      const res = await fetch(`/api/admin/aliados/${addLeadTarget!._id}/leads`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(leadForm),
+      })
+      const data = await res.json()
+      if (!res.ok) { setLeadError(data.error ?? "Error al añadir lead"); return }
+      
+      setAddLeadTarget(null)
+      setLeadForm({
+        nombre: "", apellido: "", email: "", telefono: "", nacionalidad: "", programa: "",
+        puedeCubrirCostos: "", profesion: "", nivelEscolaridad: "", notas: ""
+      })
+      
+      setAliados(prev => prev.map(a => a._id === addLeadTarget!._id ? { ...a, leadCount: (a.leadCount || 0) + 1 } : a))
+    } catch {
+      setLeadError("Error de conexión")
+    } finally {
+      setAddingLead(false)
+    }
+  }
 
   const fetchAliados = useCallback(async () => {
     setLoading(true)
@@ -355,6 +395,9 @@ export default function AdminPage() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50" onClick={() => setAddLeadTarget(aliado)} title="Añadir Lead a este aliado">
+                            <UserPlus className="w-4 h-4" />
+                          </Button>
                           <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setLeadsTarget(aliado)} title="Ver Leads">
                             <Users className="w-4 h-4 text-muted-foreground" />
                           </Button>
@@ -710,6 +753,68 @@ export default function AdminPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ── Modal: Añadir Lead ────────────────────────────── */}
+      <Dialog open={!!addLeadTarget} onOpenChange={open => { if (!open) setAddLeadTarget(null) }}>
+        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Añadir Lead a {addLeadTarget?.nombre}</DialogTitle>
+            <DialogDescription>
+              Registra un referido directamente. Quedará asignado a la etiqueta @{addLeadTarget?.etiqueta}.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAddLead} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Nombre *</Label>
+                <Input required placeholder="Nombre del prospecto" value={leadForm.nombre} onChange={e => setLeadForm({...leadForm, nombre: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label>Apellido *</Label>
+                <Input required placeholder="Apellido del prospecto" value={leadForm.apellido} onChange={e => setLeadForm({...leadForm, apellido: e.target.value})} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Correo *</Label>
+                <Input required type="email" placeholder="correo@ejemplo.com" value={leadForm.email} onChange={e => setLeadForm({...leadForm, email: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label>Teléfono *</Label>
+                <Input required placeholder="+123456789" value={leadForm.telefono} onChange={e => setLeadForm({...leadForm, telefono: e.target.value})} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Nacionalidad</Label>
+                <Input placeholder="Ej: Colombiano" value={leadForm.nacionalidad} onChange={e => setLeadForm({...leadForm, nacionalidad: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label>Programa de interés</Label>
+                <Input placeholder="Ej: Visa de Estudiante" value={leadForm.programa} onChange={e => setLeadForm({...leadForm, programa: e.target.value})} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Notas / Perfilamiento</Label>
+              <textarea 
+                className="w-full min-h-[80px] p-3 text-sm rounded-md border border-input bg-background"
+                placeholder="Detalles adicionales del lead..."
+                value={leadForm.notas}
+                onChange={e => setLeadForm({...leadForm, notas: e.target.value})}
+              />
+            </div>
+
+            {leadError && <p className="text-destructive text-sm font-medium">{leadError}</p>}
+
+            <DialogFooter className="pt-4">
+              <Button type="button" variant="outline" onClick={() => setAddLeadTarget(null)}>Cancelar</Button>
+              <Button type="submit" disabled={addingLead}>
+                {addingLead ? "Añadiendo..." : "Añadir Lead"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
