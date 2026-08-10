@@ -688,27 +688,59 @@ export default function AdminPage() {
                               {lead.fechaRegistro}
                             </td>
                             <td className="px-4 py-3 text-right">
-                              {lead.notas && (
+                              {(lead.notas || lead.notasHistorial?.length > 0) && (
                                 <Button
                                   size="icon"
                                   variant="ghost"
                                   className="h-8 w-8 text-muted-foreground hover:text-foreground"
                                   onClick={() => setExpandedLeadId(expandedLeadId === lead.id ? null : lead.id)}
-                                  title="Ver perfilamiento"
+                                  title="Ver perfilamiento y notas"
                                 >
                                   <Info className="w-4 h-4" />
                                 </Button>
                               )}
                             </td>
                           </tr>
-                          {expandedLeadId === lead.id && lead.notas && (
+                          {expandedLeadId === lead.id && (lead.notas || lead.notasHistorial?.length > 0) && (
                             <tr className="bg-muted/20">
-                              <td colSpan={6} className="px-4 py-3 text-xs text-muted-foreground whitespace-pre-line border-t border-b">
-                                <div className="bg-background p-4 rounded-xl border space-y-2">
-                                  <p className="font-bold text-[10px] uppercase tracking-wider text-primary">Perfil del Referido</p>
-                                  <div className="text-foreground leading-relaxed">
-                                    {lead.notas}
-                                  </div>
+                              <td colSpan={6} className="px-4 py-3 text-xs text-muted-foreground border-t border-b">
+                                <div className="space-y-3">
+                                  {lead.notas && (
+                                    <div className="bg-background p-4 rounded-xl border space-y-2">
+                                      <p className="font-bold text-[10px] uppercase tracking-wider text-primary">Perfil del Referido</p>
+                                      <div className="text-foreground leading-relaxed whitespace-pre-line">
+                                        {lead.notas}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {lead.notasHistorial?.length > 0 && (
+                                    <div className="bg-background p-4 rounded-xl border space-y-3">
+                                      <p className="font-bold text-[10px] uppercase tracking-wider text-primary">
+                                        Notas ({lead.notasHistorial.length})
+                                      </p>
+                                      <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                                        {lead.notasHistorial.map((nota: any) => (
+                                          <div key={nota.id} className="rounded-lg border bg-muted/20 p-3 space-y-1.5">
+                                            <div className="flex items-center justify-between gap-3">
+                                              <span className="font-semibold text-foreground text-[11px]">
+                                                {nota.autor}
+                                                {nota.autorEmail && (
+                                                  <span className="font-normal text-muted-foreground"> · {nota.autorEmail}</span>
+                                                )}
+                                              </span>
+                                              <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                                                {nota.fechaLabel}
+                                              </span>
+                                            </div>
+                                            <p className="text-foreground leading-relaxed whitespace-pre-line">
+                                              {nota.texto}
+                                            </p>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               </td>
                             </tr>

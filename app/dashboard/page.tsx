@@ -57,6 +57,15 @@ type Lead = {
   stageLabel?: string
   fechaRegistro: string
   notas?: string
+  notasHistorial?: {
+    id: string
+    texto: string
+    fecha: string
+    fechaLabel: string
+    autor: string
+    autorEmail: string
+    esPerfil: boolean
+  }[]
   owner?: { nombre: string; email: string; foto?: string } | null
 }
 
@@ -498,6 +507,40 @@ function LeadDetail({ lead, etapas }: { lead: Lead; onClose: () => void; etapas:
               </div>
             ) : (
               <p className="text-sm text-muted-foreground italic text-center py-6">Sin información de perfilamiento adicional.</p>
+            )}
+          </div>
+        </section>
+
+        {/* Historial completo de notas */}
+        <section className="space-y-4">
+          <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <FileText className="w-4 h-4 text-primary" />
+            Notas {lead.notasHistorial?.length ? `(${lead.notasHistorial.length})` : ""}
+          </h4>
+          <div className="bg-muted/10 p-6 rounded-xl border border-border shadow-sm">
+            {lead.notasHistorial?.length ? (
+              <div className="space-y-3">
+                {lead.notasHistorial.map((nota) => (
+                  <div key={nota.id} className="rounded-xl border border-border/60 bg-background p-4 space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-xs font-semibold text-foreground">
+                        {nota.autor}
+                        {nota.autorEmail && (
+                          <span className="font-normal text-muted-foreground"> · {nota.autorEmail}</span>
+                        )}
+                      </span>
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                        {nota.fechaLabel}
+                      </span>
+                    </div>
+                    <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">
+                      {nota.texto}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground italic text-center py-6">Aún no hay notas registradas para este contacto.</p>
             )}
           </div>
         </section>

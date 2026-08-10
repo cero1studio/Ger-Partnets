@@ -286,26 +286,27 @@ export async function getContactsByTag(tagId: string) {
   )] as string[]
 
   const ownersMap = await getOwnersBatch(ownerIds)
-  const notesMap = await getLatestProfileNotesByContact(contacts.map((c: { id: string }) => c.id))
 
   // Fetch deal associations to get dynamic stages
   const contactIds = contacts.map((c: { id: string }) => c.id)
   let dealsMap: Record<string, string> = {}
+  // Los asesores registran las notas sobre el NEGOCIO, no sobre el contacto,
+  // así que necesitamos el mapa contacto → negocios para traerlas.
+  const contactToDeal: Record<string, string[]> = {}
 
   try {
     const associations = await hsPost("/crm/v3/associations/contacts/deals/batch/read", {
-      inputs: contactIds.map(id => ({ id }))
+      inputs: contactIds.map((id: string) => ({ id }))
     })
 
     const dealIds = new Set<string>()
-    const contactToDeal: Record<string, string[]> = {}
-    
+
     for (const row of associations.results ?? []) {
       const cId = String(row.from?.id ?? row.fromId ?? "")
       if (!cId) continue
       const dIds = (row.to ?? []).map((d: any) => String(d.id ?? d.toId ?? "")).filter(Boolean)
       contactToDeal[cId] = dIds
-      dIds.forEach(id => dealIds.add(id))
+      dIds.forEach((id: string) => dealIds.add(id))
     }
 
     if (dealIds.size > 0) {
@@ -333,6 +334,8 @@ export async function getContactsByTag(tagId: string) {
     console.error("[getContactsByTag] Error fetching associated deals:", err)
   }
 
+  const notesMap = await getNotesByContact(contactIds, contactToDeal)
+
   // Fetch the latest dynamic pipeline stages for labels
   const pipelineStages = await getPipelineStages()
   const dynamicStageMap = Object.fromEntries(pipelineStages.map(s => [s.id, s.nombre]))
@@ -344,6 +347,7 @@ export async function getContactsByTag(tagId: string) {
 
     const stageId = dealsMap[c.id] || CONTACT_STAGE_DEFAULT
     const stageLabel = dynamicStageMap[stageId] || STAGE_MAP[stageId] || "Contacto inicial"
+    const notasContacto = notesMap[c.id] ?? []
 
     return {
       id: c.id,
@@ -356,7 +360,10 @@ export async function getContactsByTag(tagId: string) {
       ownerHubspotId: p.hubspot_owner_id ?? "",
       owner: owner ? { nombre: owner.nombre, email: owner.email, foto: owner.foto } : null,
       fechaRegistro: p.createdate ? new Date(p.createdate).toLocaleDateString("es-CO") : "",
-      notas: cleanBackupNotes(p[PROFILE_PROP] ?? notesMap[c.id] ?? ""),
+      // Perfilamiento: propiedad del contacto, o la nota de perfil más reciente.
+      notas: cleanBackupNotes(p[PROFILE_PROP] ?? notasContacto.find(n => n.esPerfil)?.texto ?? ""),
+      // Historial completo de notas (todas, con autor y fecha).
+      notasHistorial: notasContacto,
       contactId: c.id,
     }
   })
@@ -457,24 +464,93 @@ function isProfileNote(noteBody: string): boolean {
   ].some(marker => noteBody.includes(marker))
 }
 
-async function getLatestProfileNotesByContact(contactIds: string[]): Promise<Record<string, string>> {
-  if (!contactIds.length) return {}
+export type LeadNote = {
+  id: string
+  texto: string
+  fecha: string          // ISO
+  fechaLabel: string     // dd/mm/yyyy hh:mm
+  autor: string
+  autorEmail: string
+  esPerfil: boolean
+}
 
-  try {
-    const associations = await hsPost("/crm/v3/associations/contacts/notes/batch/read", {
-      inputs: contactIds.map(id => ({ id })),
+function chunk<T>(items: T[], size: number): T[][] {
+  const out: T[][] = []
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size))
+  return out
+}
+
+/** Los cuerpos de nota de HubSpot vienen en HTML; los pasamos a texto plano. */
+function htmlToPlainText(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|li|tr|h[1-6])>/gi, "\n")
+    .replace(/<li[^>]*>/gi, "• ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+}
+
+/** Devuelve objeto origen → ids de notas asociadas. */
+async function readNoteAssociations(
+  fromType: "contacts" | "deals",
+  fromIds: string[],
+): Promise<Record<string, string[]>> {
+  const map: Record<string, string[]> = {}
+  if (!fromIds.length) return map
+
+  for (const group of chunk(fromIds, 100)) {
+    const associations = await hsPost(`/crm/v3/associations/${fromType}/notes/batch/read`, {
+      inputs: group.map(id => ({ id })),
     })
 
-    const contactToNoteIds: Record<string, string[]> = {}
-    const allNoteIds = new Set<string>()
-
     for (const row of associations.results ?? []) {
-      const contactId = String(row.from?.id ?? row.fromId ?? "")
-      if (!contactId) continue
+      const fromId = String(row.from?.id ?? row.fromId ?? "")
+      if (!fromId) continue
       const noteIds = (row.to ?? [])
         .map((n: { id?: string | number; toId?: string | number }) => String(n.id ?? n.toId ?? ""))
         .filter(Boolean)
 
+      if (!noteIds.length) continue
+      map[fromId] = [...(map[fromId] ?? []), ...noteIds]
+    }
+  }
+
+  return map
+}
+
+/**
+ * Trae TODAS las notas de cada contacto: las asociadas al contacto y — sobre todo —
+ * las que los asesores escriben sobre el NEGOCIO asociado, con autor y fecha.
+ */
+async function getNotesByContact(
+  contactIds: string[],
+  contactToDeal: Record<string, string[]> = {},
+): Promise<Record<string, LeadNote[]>> {
+  if (!contactIds.length) return {}
+
+  try {
+    const dealIds = [...new Set(Object.values(contactToDeal).flat())]
+
+    const [notesByContactId, notesByDealId] = await Promise.all([
+      readNoteAssociations("contacts", contactIds),
+      readNoteAssociations("deals", dealIds),
+    ])
+
+    const contactToNoteIds: Record<string, string[]> = {}
+    const allNoteIds = new Set<string>()
+
+    for (const contactId of contactIds) {
+      const noteIds = [
+        ...(notesByContactId[contactId] ?? []),
+        ...(contactToDeal[contactId] ?? []).flatMap(dealId => notesByDealId[dealId] ?? []),
+      ]
       if (!noteIds.length) continue
       contactToNoteIds[contactId] = noteIds
       for (const noteId of noteIds) allNoteIds.add(noteId)
@@ -482,30 +558,79 @@ async function getLatestProfileNotesByContact(contactIds: string[]): Promise<Rec
 
     if (!allNoteIds.size) return {}
 
-    const notesBatch = await hsPost("/crm/v3/objects/notes/batch/read", {
-      inputs: [...allNoteIds].map(id => ({ id })),
-      properties: ["hs_note_body", "hs_timestamp"],
-    })
+    type RawNote = { body: string; ts: number; ownerId: string; createdById: string }
+    const notesById: Record<string, RawNote> = {}
 
-    const notesById: Record<string, { body: string; ts: number }> = {}
-    for (const note of notesBatch.results ?? []) {
-      const body = String(note.properties?.hs_note_body ?? "")
-      const ts = Date.parse(String(note.properties?.hs_timestamp ?? "")) || 0
-      notesById[String(note.id)] = { body, ts }
+    for (const group of chunk([...allNoteIds], 100)) {
+      const notesBatch = await hsPost("/crm/v3/objects/notes/batch/read", {
+        inputs: group.map(id => ({ id })),
+        properties: [
+          "hs_note_body", "hs_timestamp", "hs_createdate",
+          "hubspot_owner_id", "hs_created_by", "hs_created_by_user_id",
+        ],
+      })
+
+      for (const note of notesBatch.results ?? []) {
+        const props = note.properties ?? {}
+        const body = String(props.hs_note_body ?? "")
+        const ts = Date.parse(String(props.hs_timestamp ?? props.hs_createdate ?? "")) || 0
+        notesById[String(note.id)] = {
+          body,
+          ts,
+          ownerId: String(props.hubspot_owner_id ?? ""),
+          createdById: String(props.hs_created_by ?? props.hs_created_by_user_id ?? ""),
+        }
+      }
     }
 
-    const latestByContact: Record<string, string> = {}
+    // Resolvemos los nombres de quienes escribieron las notas.
+    const authorIds = [...new Set(
+      Object.values(notesById).flatMap(n => [n.ownerId, n.createdById]).filter(Boolean)
+    )]
+    const authorsMap = await getOwnersBatch(authorIds).catch(() => ({} as Record<string, { nombre: string; email: string }>))
+
+    const result: Record<string, LeadNote[]> = {}
+
     for (const contactId of Object.keys(contactToNoteIds)) {
-      const notes = contactToNoteIds[contactId].map(noteId => notesById[noteId]).filter(Boolean)
-      if (!notes.length) continue
-      const profileNotes = notes.filter(n => isProfileNote(n.body))
-      const source = profileNotes.length ? profileNotes : notes
-      source.sort((a, b) => b.ts - a.ts)
-      latestByContact[contactId] = cleanBackupNotes(source[0].body)
+      const seen = new Set<string>()
+      const notes: LeadNote[] = []
+
+      for (const noteId of contactToNoteIds[contactId]) {
+        if (seen.has(noteId)) continue
+        seen.add(noteId)
+
+        const raw = notesById[noteId]
+        if (!raw) continue
+
+        const texto = cleanBackupNotes(htmlToPlainText(raw.body))
+        if (!texto) continue
+
+        const author = authorsMap[raw.ownerId] ?? authorsMap[raw.createdById] ?? null
+        const fecha = raw.ts ? new Date(raw.ts).toISOString() : ""
+
+        notes.push({
+          id: noteId,
+          texto,
+          fecha,
+          fechaLabel: raw.ts
+            ? new Date(raw.ts).toLocaleString("es-CO", {
+                day: "2-digit", month: "2-digit", year: "numeric",
+                hour: "2-digit", minute: "2-digit",
+              })
+            : "",
+          autor: author?.nombre || "Portal de aliados",
+          autorEmail: author?.email || "",
+          esPerfil: isProfileNote(raw.body),
+        })
+      }
+
+      notes.sort((a, b) => (Date.parse(b.fecha) || 0) - (Date.parse(a.fecha) || 0))
+      if (notes.length) result[contactId] = notes
     }
 
-    return latestByContact
-  } catch {
+    return result
+  } catch (err) {
+    console.error("[getNotesByContact]", err)
     return {}
   }
 }
