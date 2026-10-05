@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
     console.error("[POST /api/leads]", err)
     // Un contacto repetido no es un error del sistema: se avisa con claridad.
     if (err instanceof ContactoDuplicadoError) {
-      return NextResponse.json({ error: err.message }, { status: 409 })
+      return NextResponse.json({ error: err.mensajeParaAliado }, { status: 409 })
     }
 
     // Devolvemos el motivo real para que el aliado no se quede sin saber qué pasó.

@@ -687,9 +687,25 @@ async function getNotesByContact(
 
 /** El contacto ya existe en HubSpot bajo otro aliado. */
 export class ContactoDuplicadoError extends Error {
-  constructor(message: string) {
-    super(message)
+  /** Etiqueta del aliado que ya tiene el contacto. Solo se le muestra al admin. */
+  readonly aliadoActual: string
+
+  constructor(aliadoActual: string) {
+    super("Este contacto ya está registrado en HubSpot y pertenece a otro aliado.")
     this.name = "ContactoDuplicadoError"
+    this.aliadoActual = aliadoActual
+  }
+
+  /** Mensaje para el aliado: sin revelar de quién es el contacto. */
+  get mensajeParaAliado(): string {
+    return "Este correo ya está registrado en HubSpot por otro aliado, así que no se puede volver a registrar. " +
+      "Si crees que es un error, contacta al administrador."
+  }
+
+  /** Mensaje para el admin: con el aliado dueño del contacto. */
+  get mensajeParaAdmin(): string {
+    return `Este contacto ya está registrado en HubSpot por el aliado @${this.aliadoActual}. ` +
+      "No se puede volver a registrar con el mismo correo."
   }
 }
 
@@ -816,10 +832,7 @@ export async function createContact(params: {
     const duenoActual = String(actual?.properties?.company ?? "")
 
     if (duenoActual.startsWith(ALLY_TAG_PREFIX) && duenoActual !== allyTagValue(params.tagId)) {
-      throw new ContactoDuplicadoError(
-        `Este contacto ya está registrado en HubSpot por el aliado @${duenoActual.replace(ALLY_TAG_PREFIX, "")}. ` +
-        `No se puede volver a registrar con el mismo correo.`
-      )
+      throw new ContactoDuplicadoError(duenoActual.replace(ALLY_TAG_PREFIX, ""))
     }
 
     await hsPatch(`/crm/v3/objects/contacts/${contactId}`, { properties })
