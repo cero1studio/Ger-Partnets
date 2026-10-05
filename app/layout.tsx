@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { Toaster } from '@/components/ui/sonner'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -33,6 +34,8 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning className="bg-background">
       <body suppressHydrationWarning className="font-sans antialiased min-h-screen">
         {children}
+        {/* Avisos emergentes: sin esto ningún toast de la app se ve. */}
+        <Toaster position="top-center" richColors closeButton duration={8000} />
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

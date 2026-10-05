@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -181,13 +182,18 @@ export default function DashboardPage() {
         }
         setIsDialogOpen(false)
         resetForm()
+        toast.success("Referido registrado correctamente")
       } else {
         // Antes esto no mostraba nada y el formulario parecía "trabado".
         const data = await res.json().catch(() => null)
-        setSaveError(data?.error ?? "No se pudo guardar el referido. Intenta de nuevo.")
+        const mensaje = data?.error ?? "No se pudo guardar el referido. Intenta de nuevo."
+        setSaveError(mensaje)
+        toast.error("No se pudo guardar el referido", { description: mensaje })
       }
     } catch {
-      setSaveError("Se perdió la conexión al guardar. Revisa tu internet e intenta de nuevo.")
+      const mensaje = "Se perdió la conexión al guardar. Revisa tu internet e intenta de nuevo."
+      setSaveError(mensaje)
+      toast.error("Error de conexión", { description: mensaje })
     } finally {
       setIsSaving(false)
     }

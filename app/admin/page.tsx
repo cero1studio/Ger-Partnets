@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, Fragment } from "react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -129,7 +130,9 @@ export default function AdminPage() {
     e.preventDefault()
     setLeadError("")
     if (!leadForm.nombre || !leadForm.apellido || !leadForm.email || !leadForm.telefono) {
-      setLeadError("Nombre, apellido, email y teléfono son requeridos")
+      const mensaje = "Nombre, apellido, email y teléfono son requeridos"
+      setLeadError(mensaje)
+      toast.error("Faltan datos", { description: mensaje })
       return
     }
     setAddingLead(true)
@@ -139,8 +142,14 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(leadForm),
       })
-      const data = await res.json()
-      if (!res.ok) { setLeadError(data.error ?? "Error al añadir lead"); return }
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        const mensaje = data?.error ?? "No se pudo añadir el lead. Intenta de nuevo."
+        setLeadError(mensaje)
+        // El formulario tiene scroll y el texto de error quedaba fuera de la vista.
+        toast.error("No se pudo añadir el lead", { description: mensaje })
+        return
+      }
       
       setAddLeadTarget(null)
       setLeadForm({
@@ -149,8 +158,11 @@ export default function AdminPage() {
       })
       
       setAliados(prev => prev.map(a => a._id === addLeadTarget!._id ? { ...a, leadCount: (a.leadCount || 0) + 1 } : a))
+      toast.success("Lead añadido correctamente")
     } catch {
-      setLeadError("Error de conexión")
+      const mensaje = "Se perdió la conexión. Revisa tu internet e intenta de nuevo."
+      setLeadError(mensaje)
+      toast.error("Error de conexión", { description: mensaje })
     } finally {
       setAddingLead(false)
     }
