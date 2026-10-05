@@ -146,10 +146,12 @@ export default function DashboardPage() {
   })
 
   const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSaving(true)
+    setSaveError(null)
     try {
       const res = await fetch("/api/leads", {
         method: "POST",
@@ -179,7 +181,13 @@ export default function DashboardPage() {
         }
         setIsDialogOpen(false)
         resetForm()
+      } else {
+        // Antes esto no mostraba nada y el formulario parecía "trabado".
+        const data = await res.json().catch(() => null)
+        setSaveError(data?.error ?? "No se pudo guardar el referido. Intenta de nuevo.")
       }
+    } catch {
+      setSaveError("Se perdió la conexión al guardar. Revisa tu internet e intenta de nuevo.")
     } finally {
       setIsSaving(false)
     }
@@ -248,6 +256,7 @@ export default function DashboardPage() {
                   handleSubmit={handleSubmit}
                   onCancel={() => { setIsDialogOpen(false); resetForm(); }}
                   isSaving={isSaving}
+                  saveError={saveError}
                 />
               </DialogContent>
             </Dialog>
@@ -286,6 +295,7 @@ export default function DashboardPage() {
               handleSubmit={handleSubmit}
               onCancel={() => { setIsDialogOpen(false); resetForm(); }}
               isSaving={isSaving}
+              saveError={saveError}
             />
           </DialogContent>
         </Dialog>
@@ -591,9 +601,10 @@ type LeadFormProps = {
   handleSubmit: (e: React.FormEvent) => void
   onCancel: () => void
   isSaving?: boolean
+  saveError?: string | null
 }
 
-function LeadForm({ formData, setFormData, handleSubmit, onCancel, isSaving }: LeadFormProps) {
+function LeadForm({ formData, setFormData, handleSubmit, onCancel, isSaving, saveError }: LeadFormProps) {
   const [step, setStep] = useState(1)
 
   const validateStep1 = () => {
@@ -906,6 +917,15 @@ function LeadForm({ formData, setFormData, handleSubmit, onCancel, isSaving }: L
         </div>
 
       </div>
+
+      {/* Aviso de error: antes el formulario fallaba en silencio y parecía trabado */}
+      {saveError && (
+        <div className="mx-4 mb-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 shrink-0">
+          <p className="text-sm font-semibold text-red-800">No se pudo guardar</p>
+          <p className="text-sm text-red-700 mt-0.5">{saveError}</p>
+          <p className="text-xs text-red-600/80 mt-1.5">Corrige el dato e intenta de nuevo; no necesitas recargar la página.</p>
+        </div>
+      )}
 
       {/* Footer / Controls - Fixed at bottom */}
       <div className="p-4 border-t bg-muted/10 flex gap-3 shrink-0">

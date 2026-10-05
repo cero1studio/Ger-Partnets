@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/auth"
 import { connectDB } from "@/lib/mongodb"
 import User from "@/lib/models/User"
-import { getContactsByTag, createContact, getPipelineStages } from "@/lib/hubspot"
+import { getContactsByTag, createContact, getPipelineStages, ContactoDuplicadoError } from "@/lib/hubspot"
 
 // GET /api/leads — devuelve los contactos del aliado en formato embudo
 export async function GET() {
@@ -96,6 +96,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, ...result }, { status: 201 })
   } catch (err) {
     console.error("[POST /api/leads]", err)
-    return NextResponse.json({ error: "Error al registrar contacto en HubSpot" }, { status: 500 })
+    // Un contacto repetido no es un error del sistema: se avisa con claridad.
+    if (err instanceof ContactoDuplicadoError) {
+      return NextResponse.json({ error: err.message }, { status: 409 })
+    }
+
+    // Devolvemos el motivo real para que el aliado no se quede sin saber qué pasó.
+    const detalle = err instanceof Error ? err.message : String(err)
+    return NextResponse.json(
+      { error: "No se pudo registrar el referido en HubSpot. Intenta de nuevo.", detalle },
+      { status: 500 }
+    )
   }
 }

@@ -75,16 +75,34 @@ let contactPropertiesPromise: Promise<ContactPropertyMeta> | null = null
 
 // ─── Helpers ──────────────────────────────────────────────
 
+/**
+ * HubSpot limita a 19 llamadas por segundo. Ante un 429 esperamos y reintentamos
+ * en vez de dejar caer la operación.
+ */
+async function hsFetch(url: string, init: RequestInit, intentos = 3): Promise<Response> {
+  let res = await fetch(url, init)
+
+  for (let intento = 1; intento < intentos && res.status === 429; intento++) {
+    const retryAfter = Number(res.headers.get("Retry-After"))
+    const esperaMs = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 1000 * intento
+    console.warn(`[HubSpot] 429 en ${url}; reintentando en ${esperaMs}ms (intento ${intento + 1}/${intentos})`)
+    await new Promise(r => setTimeout(r, esperaMs))
+    res = await fetch(url, init)
+  }
+
+  return res
+}
+
 async function hsGet(path: string, params: Record<string, string> = {}) {
   const url = new URL(`${BASE}${path}`)
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
-  const res = await fetch(url.toString(), { headers: HEADS, cache: "no-store" })
+  const res = await hsFetch(url.toString(), { headers: HEADS, cache: "no-store" })
   if (!res.ok) throw new Error(`HubSpot GET ${path} → ${res.status}`)
   return res.json()
 }
 
 async function hsPost(path: string, body: unknown, suppress409Log = false) {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await hsFetch(`${BASE}${path}`, {
     method: "POST",
     headers: HEADS,
     body: JSON.stringify(body),
@@ -95,13 +113,15 @@ async function hsPost(path: string, body: unknown, suppress409Log = false) {
     if (!(res.status === 409 && suppress409Log)) {
       console.error(`[HubSpot Error] POST ${path} -> ${res.status}:`, err)
     }
-    throw new Error(`HubSpot POST ${path} → ${res.status}`)
+    // Conservamos el cuerpo de la respuesta: trae el motivo y, en los 409,
+    // el id del contacto que ya existe.
+    throw new Error(`HubSpot POST ${path} → ${res.status}: ${err}`)
   }
   return res.json()
 }
 
 async function hsPatch(path: string, body: unknown) {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await hsFetch(`${BASE}${path}`, {
     method: "PATCH",
     headers: HEADS,
     body: JSON.stringify(body),
@@ -113,6 +133,33 @@ async function hsPatch(path: string, body: unknown) {
     throw new Error(`HubSpot PATCH ${path} → ${res.status}`)
   }
   return res.json()
+}
+
+/**
+ * HubSpot rechaza cualquier batch/read con más de 100 inputs.
+ * Partimos en lotes y unimos los resultados; si un lote falla, los demás sobreviven.
+ */
+const HUBSPOT_BATCH_LIMIT = 100
+
+async function hsBatchRead(
+  path: string,
+  ids: string[],
+  extraBody: Record<string, unknown> = {},
+): Promise<any[]> {
+  const unique = [...new Set(ids.filter(Boolean))]
+  if (!unique.length) return []
+
+  const results: any[] = []
+  for (let i = 0; i < unique.length; i += HUBSPOT_BATCH_LIMIT) {
+    const slice = unique.slice(i, i + HUBSPOT_BATCH_LIMIT)
+    try {
+      const data = await hsPost(path, { inputs: slice.map(id => ({ id })), ...extraBody })
+      results.push(...(data.results ?? []))
+    } catch (err) {
+      console.error(`[hsBatchRead] Lote ${i / HUBSPOT_BATCH_LIMIT + 1} de ${path} falló:`, (err as Error).message)
+    }
+  }
+  return results
 }
 
 function normalizeEnumToken(value: string): string {
@@ -262,23 +309,38 @@ function cleanBackupNotes(description: string): string {
 }
 
 export async function getContactsByTag(tagId: string) {
-  const data = await hsPost("/crm/v3/objects/contacts/search", {
-    filterGroups: [{
-      filters: [{ propertyName: "company", operator: "EQ", value: allyTagValue(tagId) }],
-    }],
-    properties: [...CONTACT_PROPS.split(","), PROFILE_PROP],
-    limit: 200,
-    sorts: [{ propertyName: "createdate", direction: "DESCENDING" }],
-  }).catch(async () => hsPost("/crm/v3/objects/contacts/search", {
-    filterGroups: [{
-      filters: [{ propertyName: "company", operator: "EQ", value: allyTagValue(tagId) }],
-    }],
-    properties: CONTACT_PROPS.split(","),
-    limit: 200,
-    sorts: [{ propertyName: "createdate", direction: "DESCENDING" }],
-  }))
+  // El search de HubSpot devuelve máximo 200 por página: paginamos para no
+  // perder leads cuando un aliado supera esa cifra.
+  async function searchPage(properties: string[], after?: string) {
+    const body: Record<string, unknown> = {
+      filterGroups: [{
+        filters: [{ propertyName: "company", operator: "EQ", value: allyTagValue(tagId) }],
+      }],
+      properties,
+      limit: 200,
+      sorts: [{ propertyName: "createdate", direction: "DESCENDING" }],
+    }
+    if (after) body.after = after
+    return hsPost("/crm/v3/objects/contacts/search", body)
+  }
 
-  const contacts = data.results ?? []
+  const contacts: { id: string; properties: Record<string, string> }[] = []
+  let after: string | undefined
+  let useProfileProp = true
+
+  do {
+    let page
+    try {
+      page = await searchPage(useProfileProp ? [...CONTACT_PROPS.split(","), PROFILE_PROP] : CONTACT_PROPS.split(","), after)
+    } catch {
+      // El portal puede no tener la propiedad de perfil: reintentamos sin ella.
+      useProfileProp = false
+      page = await searchPage(CONTACT_PROPS.split(","), after)
+    }
+    contacts.push(...(page.results ?? []))
+    after = page.paging?.next?.after
+  } while (after)
+
   if (contacts.length === 0) return []
 
   const ownerIds = [...new Set(
@@ -295,13 +357,11 @@ export async function getContactsByTag(tagId: string) {
   const contactToDeal: Record<string, string[]> = {}
 
   try {
-    const associations = await hsPost("/crm/v3/associations/contacts/deals/batch/read", {
-      inputs: contactIds.map((id: string) => ({ id }))
-    })
+    const associations = await hsBatchRead("/crm/v3/associations/contacts/deals/batch/read", contactIds)
 
     const dealIds = new Set<string>()
 
-    for (const row of associations.results ?? []) {
+    for (const row of associations) {
       const cId = String(row.from?.id ?? row.fromId ?? "")
       if (!cId) continue
       const dIds = (row.to ?? []).map((d: any) => String(d.id ?? d.toId ?? "")).filter(Boolean)
@@ -310,13 +370,12 @@ export async function getContactsByTag(tagId: string) {
     }
 
     if (dealIds.size > 0) {
-      const dealsBatch = await hsPost("/crm/v3/objects/deals/batch/read", {
-        inputs: [...dealIds].map(id => ({ id })),
-        properties: ["dealstage"]
+      const dealsBatch = await hsBatchRead("/crm/v3/objects/deals/batch/read", [...dealIds], {
+        properties: ["dealstage"],
       })
 
       const dealStageById: Record<string, string> = {}
-      for (const deal of dealsBatch.results ?? []) {
+      for (const deal of dealsBatch) {
         dealStageById[String(deal.id)] = deal.properties?.dealstage ?? ""
       }
 
@@ -474,12 +533,6 @@ export type LeadNote = {
   esPerfil: boolean
 }
 
-function chunk<T>(items: T[], size: number): T[][] {
-  const out: T[][] = []
-  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size))
-  return out
-}
-
 /** Los cuerpos de nota de HubSpot vienen en HTML; los pasamos a texto plano. */
 function htmlToPlainText(html: string): string {
   return html
@@ -505,21 +558,17 @@ async function readNoteAssociations(
   const map: Record<string, string[]> = {}
   if (!fromIds.length) return map
 
-  for (const group of chunk(fromIds, 100)) {
-    const associations = await hsPost(`/crm/v3/associations/${fromType}/notes/batch/read`, {
-      inputs: group.map(id => ({ id })),
-    })
+  const associations = await hsBatchRead(`/crm/v3/associations/${fromType}/notes/batch/read`, fromIds)
 
-    for (const row of associations.results ?? []) {
-      const fromId = String(row.from?.id ?? row.fromId ?? "")
-      if (!fromId) continue
-      const noteIds = (row.to ?? [])
-        .map((n: { id?: string | number; toId?: string | number }) => String(n.id ?? n.toId ?? ""))
-        .filter(Boolean)
+  for (const row of associations) {
+    const fromId = String(row.from?.id ?? row.fromId ?? "")
+    if (!fromId) continue
+    const noteIds = (row.to ?? [])
+      .map((n: { id?: string | number; toId?: string | number }) => String(n.id ?? n.toId ?? ""))
+      .filter(Boolean)
 
-      if (!noteIds.length) continue
-      map[fromId] = [...(map[fromId] ?? []), ...noteIds]
-    }
+    if (!noteIds.length) continue
+    map[fromId] = [...(map[fromId] ?? []), ...noteIds]
   }
 
   return map
@@ -561,16 +610,15 @@ async function getNotesByContact(
     type RawNote = { body: string; ts: number; ownerId: string; createdById: string }
     const notesById: Record<string, RawNote> = {}
 
-    for (const group of chunk([...allNoteIds], 100)) {
-      const notesBatch = await hsPost("/crm/v3/objects/notes/batch/read", {
-        inputs: group.map(id => ({ id })),
+    {
+      const notesBatch = await hsBatchRead("/crm/v3/objects/notes/batch/read", [...allNoteIds], {
         properties: [
           "hs_note_body", "hs_timestamp", "hs_createdate",
           "hubspot_owner_id", "hs_created_by", "hs_created_by_user_id",
         ],
       })
 
-      for (const note of notesBatch.results ?? []) {
+      for (const note of notesBatch) {
         const props = note.properties ?? {}
         const body = String(props.hs_note_body ?? "")
         const ts = Date.parse(String(props.hs_timestamp ?? props.hs_createdate ?? "")) || 0
@@ -633,6 +681,21 @@ async function getNotesByContact(
     console.error("[getNotesByContact]", err)
     return {}
   }
+}
+
+// ─── Duplicados ───────────────────────────────────────────
+
+/** El contacto ya existe en HubSpot bajo otro aliado. */
+export class ContactoDuplicadoError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "ContactoDuplicadoError"
+  }
+}
+
+/** Saca el id del mensaje 409 de HubSpot: "Contact already exists. Existing ID: 123". */
+function extraerIdDeConflicto(mensaje: string): string | null {
+  return mensaje.match(/Existing ID:\s*(\d+)/i)?.[1] ?? null
 }
 
 // ─── Crear/actualizar contacto únicamente ─────────────────
@@ -714,29 +777,53 @@ export async function createContact(params: {
 
   if (profilePropertyReady && profileDescription) properties[PROFILE_PROP] = profileDescription
 
+  let yaExistia = false
+
   try {
-    const contactData = await hsPost("/crm/v3/objects/contacts", {
-      properties,
-    })
+    const contactData = await hsPost("/crm/v3/objects/contacts", { properties })
     contactId = contactData.id
   } catch (err) {
-    console.log("[createContact] Falla al crear contacto nuevo (quizás ya existe):", (err as Error).message)
-    try {
-      const search = await hsPost("/crm/v3/objects/contacts/search", {
-        filterGroups: [{
-          filters: [{ propertyName: "email", operator: "EQ", value: params.email.toLowerCase() }],
-        }],
-        properties: ["email"],
-        limit: 1,
-      })
-      if (search.results && search.results.length > 0) {
-        contactId = search.results[0].id
-        await hsPatch(`/crm/v3/objects/contacts/${contactId}`, { properties })
-        console.log(`[createContact] Contacto existente actualizado: ${contactId}`)
+    const mensaje = (err as Error).message
+    console.log("[createContact] No se pudo crear el contacto (puede que ya exista):", mensaje)
+
+    // HubSpot devuelve 409 con el id en el texto: "Contact already exists. Existing ID: 123".
+    // Es más confiable que buscar por correo, porque el correo puede estar
+    // registrado como secundario y la búsqueda no lo encuentra.
+    contactId = extraerIdDeConflicto(mensaje)
+
+    if (!contactId) {
+      try {
+        const search = await hsPost("/crm/v3/objects/contacts/search", {
+          filterGroups: [{
+            filters: [{ propertyName: "email", operator: "EQ", value: params.email.toLowerCase() }],
+          }],
+          properties: ["email"],
+          limit: 1,
+        })
+        if (search.results?.length > 0) contactId = search.results[0].id
+      } catch (searchErr) {
+        console.error("[createContact] No se pudo buscar el contacto existente:", (searchErr as Error).message)
       }
-    } catch (searchErr) {
-      console.error("[createContact] No se pudo buscar el contacto existente:", (searchErr as Error).message)
     }
+
+    if (!contactId) throw new Error("No fue posible crear ni actualizar el contacto en HubSpot")
+
+    yaExistia = true
+
+    // Si el contacto ya pertenece a OTRO aliado, no se lo quitamos: avisamos.
+    const actual = await hsGet(`/crm/v3/objects/contacts/${contactId}`, { properties: "company,firstname,lastname" })
+      .catch(() => null)
+    const duenoActual = String(actual?.properties?.company ?? "")
+
+    if (duenoActual.startsWith(ALLY_TAG_PREFIX) && duenoActual !== allyTagValue(params.tagId)) {
+      throw new ContactoDuplicadoError(
+        `Este contacto ya está registrado en HubSpot por el aliado @${duenoActual.replace(ALLY_TAG_PREFIX, "")}. ` +
+        `No se puede volver a registrar con el mismo correo.`
+      )
+    }
+
+    await hsPatch(`/crm/v3/objects/contacts/${contactId}`, { properties })
+    console.log(`[createContact] Contacto existente actualizado: ${contactId}`)
   }
 
   if (!contactId) {
@@ -750,6 +837,7 @@ export async function createContact(params: {
 
   return {
     contactId,
+    yaExistia,
     lead: {
       id: contactId,
       nombre: `${params.nombre} ${params.apellido}`.trim(),
