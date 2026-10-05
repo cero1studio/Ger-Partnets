@@ -698,8 +698,7 @@ export class ContactoDuplicadoError extends Error {
 
   /** Mensaje para el aliado: sin revelar de quién es el contacto. */
   get mensajeParaAliado(): string {
-    return "Este correo ya está registrado en HubSpot por otro aliado, así que no se puede volver a registrar. " +
-      "Si crees que es un error, contacta al administrador."
+    return "Este correo ya está registrado en el sistema por otro aliado."
   }
 
   /** Mensaje para el admin: con el aliado dueño del contacto. */
